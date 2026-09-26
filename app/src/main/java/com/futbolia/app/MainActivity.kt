@@ -1,39 +1,36 @@
 package com.futbolia.app
 
 import android.app.Activity
-import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.graphics.Color
+import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
 
-    companion object {
-        private const val API_URL =
-            "https://futbolia-backend-we7w.onrender.com/ai/predict/upcoming?limit=10"
-    }
+    private val apiBaseUrl =
+        "https://futbolia-backend-we7w.onrender.com"
 
-    private lateinit var mainContainer: LinearLayout
     private lateinit var predictionsContainer: LinearLayout
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
+    private lateinit var refreshButton: Button
 
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -41,748 +38,563 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        createInterface()
+        buildInterface()
         loadPredictions()
     }
 
-    private fun createInterface() {
+    private fun buildInterface() {
 
-        val scrollView = ScrollView(this)
+        val root = LinearLayout(this)
+        root.orientation = LinearLayout.VERTICAL
+        root.setBackgroundColor(Color.WHITE)
 
-        mainContainer = LinearLayout(this)
-        mainContainer.orientation = LinearLayout.VERTICAL
+        val scrollContainer = android.widget.ScrollView(this)
 
-        mainContainer.setPadding(
-            32,
-            40,
-            32,
-            40
-        )
-
-        mainContainer.setBackgroundColor(
-            Color.rgb(245, 247, 250)
-        )
-
-        scrollView.addView(mainContainer)
-
-        setContentView(scrollView)
+        val content = LinearLayout(this)
+        content.orientation = LinearLayout.VERTICAL
+        content.setPadding(24, 24, 24, 24)
 
         val title = TextView(this)
-
         title.text = "⚽ FÚTBOL IA"
-        title.textSize = 30f
-        title.setTextColor(
-            Color.rgb(20, 35, 55)
-        )
-
+        title.textSize = 32f
+        title.setTypeface(null, Typeface.BOLD)
+        title.setTextColor(Color.rgb(25, 45, 70))
         title.gravity = Gravity.CENTER
 
-        title.setTypeface(
-            null,
-            Typeface.BOLD
+        content.addView(
+            title,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
-
-        mainContainer.addView(title)
 
         val subtitle = TextView(this)
-
-        subtitle.text =
-            "Predicciones reales de inteligencia artificial"
-
-        subtitle.textSize = 16f
+        subtitle.text = "Predicciones reales de inteligencia artificial"
+        subtitle.textSize = 20f
         subtitle.setTextColor(Color.DKGRAY)
         subtitle.gravity = Gravity.CENTER
+        subtitle.setPadding(0, 8, 0, 16)
 
-        subtitle.setPadding(
-            0,
-            12,
-            0,
-            24
+        content.addView(
+            subtitle,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
 
-        mainContainer.addView(subtitle)
+        statusText = TextView(this)
+        statusText.text = "Cargando predicciones..."
+        statusText.textSize = 22f
+        statusText.setTypeface(null, Typeface.BOLD)
+        statusText.setTextColor(Color.rgb(40, 120, 80))
+        statusText.gravity = Gravity.CENTER
+        statusText.setPadding(0, 8, 0, 16)
+
+        content.addView(
+            statusText,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        refreshButton = Button(this)
+        refreshButton.text = "ACTUALIZAR PREDICCIONES"
+        refreshButton.textSize = 18f
+        refreshButton.setOnClickListener {
+            loadPredictions()
+        }
+
+        content.addView(
+            refreshButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         progressBar = ProgressBar(this)
-
         progressBar.visibility = View.VISIBLE
 
         val progressParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         )
-
         progressParams.gravity = Gravity.CENTER
+        progressParams.setMargins(0, 16, 0, 16)
 
-        mainContainer.addView(
-            progressBar,
-            progressParams
-        )
+        content.addView(progressBar, progressParams)
 
-        statusText = TextView(this)
+        predictionsContainer = LinearLayout(this)
+        predictionsContainer.orientation = LinearLayout.VERTICAL
 
-        statusText.text =
-            "Conectando con Fútbol IA..."
-
-        statusText.textSize = 15f
-        statusText.setTextColor(Color.DKGRAY)
-        statusText.gravity = Gravity.CENTER
-
-        statusText.setPadding(
-            0,
-            16,
-            0,
-            16
-        )
-
-        mainContainer.addView(statusText)
-
-        val refreshButton = Button(this)
-
-        refreshButton.text =
-            "Actualizar predicciones"
-
-        refreshButton.setOnClickListener {
-            loadPredictions()
-        }
-
-        val buttonParams = LinearLayout.LayoutParams(
+        val predictionsParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         )
+        predictionsParams.setMargins(0, 16, 0, 0)
 
-        mainContainer.addView(
-            refreshButton,
-            buttonParams
+        content.addView(
+            predictionsContainer,
+            predictionsParams
         )
 
-        predictionsContainer = LinearLayout(this)
+        scrollContainer.addView(content)
 
-        predictionsContainer.orientation =
-            LinearLayout.VERTICAL
-
-        mainContainer.addView(
-            predictionsContainer
+        root.addView(
+            scrollContainer,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
         )
+
+        setContentView(root)
     }
 
     private fun loadPredictions() {
 
         progressBar.visibility = View.VISIBLE
+        refreshButton.isEnabled = false
 
-        statusText.text =
-            "Consultando predicciones de la IA..."
+        statusText.text = "Cargando predicciones de la IA..."
+        statusText.setTextColor(Color.rgb(40, 120, 80))
 
-        statusText.setTextColor(
-            Color.DKGRAY
-        )
+        predictionsContainer.removeAllViews()
 
         executor.execute {
 
-            var connection: HttpURLConnection? = null
-
             try {
 
-                val url = URL(API_URL)
+                val url =
+                    "$apiBaseUrl/ai/predict/upcoming?limit=10"
 
-                connection =
-                    url.openConnection() as HttpURLConnection
-
-                connection.requestMethod = "GET"
-                connection.connectTimeout = 30000
-                connection.readTimeout = 30000
-
-                connection.setRequestProperty(
-                    "Accept",
-                    "application/json"
-                )
-
-                val responseCode =
-                    connection.responseCode
-
-                val inputStream =
-                    if (
-                        responseCode >= 200 &&
-                        responseCode < 300
-                    ) {
-                        connection.inputStream
-                    } else {
-                        connection.errorStream
-                    }
-
-                val response =
-                    if (inputStream != null) {
-                        inputStream
-                            .bufferedReader()
-                            .use {
-                                it.readText()
-                            }
-                    } else {
-                        ""
-                    }
-
-                if (
-                    responseCode < 200 ||
-                    responseCode >= 300
-                ) {
-                    throw Exception(
-                        "Servidor HTTP $responseCode"
-                    )
-                }
+                val response = httpGet(url)
 
                 val json = JSONObject(response)
 
-                mainHandler.post {
+                val ok = json.optBoolean("ok", false)
 
-                    progressBar.visibility =
-                        View.GONE
-
-                    showPredictions(json)
+                if (!ok) {
+                    throw Exception(
+                        json.optString(
+                            "detail",
+                            "El servidor devolvió un error."
+                        )
+                    )
                 }
 
-            } catch (error: Exception) {
+                val details = json.optJSONArray("details")
+                    ?: JSONArray()
+
+                val cards = ArrayList<JSONObject>()
+
+                for (i in 0 until details.length()) {
+
+                    val detail = details.optJSONObject(i)
+                        ?: continue
+
+                    val matchId =
+                        detail.optLong("match_id", 0L)
+
+                    if (matchId <= 0L) {
+                        continue
+                    }
+
+                    val prediction =
+                        detail.optString("prediction", "")
+
+                    val probabilities =
+                        detail.optJSONObject("probabilities")
+
+                    val hasPredictionData =
+                        prediction.isNotBlank() &&
+                        probabilities != null &&
+                        probabilities.has("home") &&
+                        probabilities.has("draw") &&
+                        probabilities.has("away")
+
+                    if (hasPredictionData) {
+
+                        cards.add(detail)
+
+                    } else {
+
+                        /*
+                         * IMPORTANTE:
+                         *
+                         * Si /ai/predict/upcoming devuelve
+                         * "skipped" porque la predicción ya existe,
+                         * consultamos la predicción guardada directamente.
+                         */
+                        try {
+
+                            val storedUrl =
+                                "$apiBaseUrl/ai/predict/$matchId"
+
+                            val storedResponse =
+                                httpGet(storedUrl)
+
+                            val storedJson =
+                                JSONObject(storedResponse)
+
+                            if (storedJson.optBoolean("ok", false)) {
+
+                                val merged =
+                                    JSONObject(detail.toString())
+
+                                copyIfExists(
+                                    storedJson,
+                                    merged,
+                                    "prediction"
+                                )
+
+                                copyIfExists(
+                                    storedJson,
+                                    merged,
+                                    "prediction_percentage"
+                                )
+
+                                copyIfExists(
+                                    storedJson,
+                                    merged,
+                                    "model_version"
+                                )
+
+                                val storedProbabilities =
+                                    storedJson.optJSONObject(
+                                        "probabilities"
+                                    )
+
+                                if (storedProbabilities != null) {
+
+                                    merged.put(
+                                        "probabilities",
+                                        storedProbabilities
+                                    )
+                                }
+
+                                cards.add(merged)
+
+                            } else {
+
+                                cards.add(detail)
+                            }
+
+                        } catch (_: Exception) {
+
+                            /*
+                             * Si un partido concreto falla,
+                             * mantenemos el registro original.
+                             */
+                            cards.add(detail)
+                        }
+                    }
+                }
 
                 mainHandler.post {
 
-                    progressBar.visibility =
-                        View.GONE
+                    progressBar.visibility = View.GONE
+                    refreshButton.isEnabled = true
+
+                    if (cards.isEmpty()) {
+
+                        statusText.text =
+                            "No hay predicciones disponibles."
+
+                        statusText.setTextColor(
+                            Color.rgb(180, 70, 70)
+                        )
+
+                    } else {
+
+                        statusText.text =
+                            "Predicciones reales de la IA: ${cards.size}"
+
+                        statusText.setTextColor(
+                            Color.rgb(40, 120, 80)
+                        )
+
+                        for (card in cards) {
+                            addPredictionCard(card)
+                        }
+                    }
+                }
+
+            } catch (e: Exception) {
+
+                mainHandler.post {
+
+                    progressBar.visibility = View.GONE
+                    refreshButton.isEnabled = true
 
                     statusText.text =
                         "No se pudieron cargar las predicciones."
 
                     statusText.setTextColor(
-                        Color.rgb(180, 40, 40)
+                        Color.rgb(180, 50, 50)
                     )
 
-                    Toast.makeText(
-                        this,
-                        "Error: ${error.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    addErrorCard(
+                        e.message ?: "Error desconocido"
+                    )
                 }
-
-            } finally {
-
-                connection?.disconnect()
             }
         }
     }
 
-    private fun showPredictions(
-        json: JSONObject
+    private fun copyIfExists(
+        source: JSONObject,
+        target: JSONObject,
+        key: String
     ) {
-
-        predictionsContainer.removeAllViews()
-
-        val details =
-            findDetailsArray(json)
-
-        if (
-            details == null ||
-            details.length() == 0
-        ) {
-
-            statusText.text =
-                "No hay predicciones disponibles."
-
-            statusText.setTextColor(
-                Color.DKGRAY
-            )
-
-            return
-        }
-
-        statusText.text =
-            "Predicciones reales de la IA: ${details.length()}"
-
-        statusText.setTextColor(
-            Color.rgb(30, 120, 70)
-        )
-
-        for (
-            index in 0 until details.length()
-        ) {
-
-            val item =
-                details.optJSONObject(index)
-
-            if (item != null) {
-
-                val card =
-                    createPredictionCard(item)
-
-                predictionsContainer.addView(card)
-            }
+        if (source.has(key) && !source.isNull(key)) {
+            target.put(key, source.get(key))
         }
     }
 
-    private fun findDetailsArray(
-        json: JSONObject
-    ): JSONArray? {
+    private fun addPredictionCard(data: JSONObject) {
 
-        val possibleNames = arrayOf(
-            "details",
-            "predictions",
-            "matches",
-            "data",
-            "results"
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        card.setPadding(16, 16, 16, 16)
+        card.setBackgroundColor(Color.rgb(250, 250, 250))
+
+        val cardParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
         )
-
-        for (name in possibleNames) {
-
-            val array =
-                json.optJSONArray(name)
-
-            if (array != null) {
-                return array
-            }
-        }
-
-        return null
-    }
-
-    private fun createPredictionCard(
-        item: JSONObject
-    ): View {
-
-        val matchId =
-            readLong(
-                item,
-                "match_id",
-                "fixture_id",
-                "id"
-            )
-
-        val startingAt =
-            readString(
-                item,
-                "starting_at",
-                "startingAt",
-                "fixture_date",
-                "date",
-                "match_date"
-            )
-
-        val prediction =
-            readString(
-                item,
-                "prediction",
-                "predicted",
-                "result",
-                "selection",
-                "pick"
-            ).ifBlank {
-                "N/D"
-            }
-
-        val predictionPercentage =
-            readProbability(
-                item,
-                "prediction_percentage",
-                "predictionPercentage",
-                "probability",
-                "confidence",
-                "percentage"
-            )
-
-        val modelVersion =
-            readString(
-                item,
-                "model_version",
-                "modelVersion",
-                "version"
-            ).ifBlank {
-                "N/D"
-            }
-
-        val probabilities =
-            item.optJSONObject(
-                "probabilities"
-            )
-
-        val home =
-            readProbability(
-                probabilities,
-                "home",
-                "local",
-                "HOME"
-            )
-
-        val draw =
-            readProbability(
-                probabilities,
-                "draw",
-                "empate",
-                "DRAW"
-            )
-
-        val away =
-            readProbability(
-                probabilities,
-                "away",
-                "visitante",
-                "AWAY"
-            )
-
-        val card =
-            LinearLayout(this)
-
-        card.orientation =
-            LinearLayout.VERTICAL
-
-        card.setPadding(
-            28,
-            24,
-            28,
-            24
-        )
-
-        card.setBackgroundColor(
-            Color.WHITE
-        )
-
-        card.elevation = 6f
-
-        val cardParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-
-        cardParams.setMargins(
-            0,
-            24,
-            0,
-            0
-        )
+        cardParams.setMargins(0, 0, 0, 12)
 
         card.layoutParams = cardParams
 
-        val matchText =
-            TextView(this)
+        val matchId =
+            data.optLong("match_id", 0L)
 
-        matchText.text =
+        val startingAt =
+            data.optString("starting_at", "")
+
+        val prediction =
+            data.optString("prediction", "N/D")
+
+        val predictionPercentage =
+            data.optDouble(
+                "prediction_percentage",
+                0.0
+            )
+
+        val probabilities =
+            data.optJSONObject("probabilities")
+
+        val homeProbability =
+            probabilities?.optDouble(
+                "home",
+                0.0
+            ) ?: 0.0
+
+        val drawProbability =
+            probabilities?.optDouble(
+                "draw",
+                0.0
+            ) ?: 0.0
+
+        val awayProbability =
+            probabilities?.optDouble(
+                "away",
+                0.0
+            ) ?: 0.0
+
+        val modelVersion =
+            data.optString(
+                "model_version",
+                "N/D"
+            )
+
+        val matchTitle = TextView(this)
+        matchTitle.text =
             "Partido #$matchId"
-
-        matchText.textSize = 20f
-
-        matchText.setTextColor(
-            Color.rgb(20, 35, 55)
-        )
-
-        matchText.setTypeface(
+        matchTitle.textSize = 26f
+        matchTitle.setTypeface(
             null,
             Typeface.BOLD
         )
+        matchTitle.setTextColor(
+            Color.rgb(25, 45, 70)
+        )
 
-        card.addView(matchText)
+        card.addView(matchTitle)
 
-        val dateText =
-            TextView(this)
-
+        val dateText = TextView(this)
         dateText.text =
             formatDate(startingAt)
-
-        dateText.textSize = 14f
-
-        dateText.setTextColor(
-            Color.GRAY
-        )
-
-        dateText.setPadding(
-            0,
-            8,
-            0,
-            16
-        )
+        dateText.textSize = 18f
+        dateText.setTextColor(Color.GRAY)
+        dateText.setPadding(0, 4, 0, 14)
 
         card.addView(dateText)
 
-        val predictionText =
-            TextView(this)
+        val predictionText = TextView(this)
 
         predictionText.text =
             "Predicción IA: $prediction"
 
-        predictionText.textSize = 22f
-
-        predictionText.setTextColor(
-            Color.rgb(20, 120, 70)
-        )
-
+        predictionText.textSize = 27f
         predictionText.setTypeface(
             null,
             Typeface.BOLD
         )
+        predictionText.setTextColor(
+            Color.rgb(35, 125, 80)
+        )
 
         card.addView(predictionText)
 
-        val confidenceText =
-            TextView(this)
+        val confidenceText = TextView(this)
 
         confidenceText.text =
-            "Probabilidad: " +
-                    formatPercent(predictionPercentage) +
-                    "%"
+            "Probabilidad: ${
+                formatPercent(predictionPercentage / 100.0)
+            }"
 
-        confidenceText.textSize = 17f
-
-        confidenceText.setTextColor(
-            Color.DKGRAY
-        )
-
-        confidenceText.setPadding(
-            0,
-            8,
-            0,
-            16
-        )
+        confidenceText.textSize = 21f
+        confidenceText.setTextColor(Color.DKGRAY)
+        confidenceText.setPadding(0, 6, 0, 10)
 
         card.addView(confidenceText)
 
-        card.addView(
-            createProbabilityRow(
-                "Local",
-                home
-            )
+        addProbabilityRow(
+            card,
+            "Local",
+            homeProbability
         )
 
-        card.addView(
-            createProbabilityRow(
-                "Empate",
-                draw
-            )
+        addProbabilityRow(
+            card,
+            "Empate",
+            drawProbability
         )
 
-        card.addView(
-            createProbabilityRow(
-                "Visitante",
-                away
-            )
+        addProbabilityRow(
+            card,
+            "Visitante",
+            awayProbability
         )
 
-        val modelText =
-            TextView(this)
+        val modelText = TextView(this)
 
         modelText.text =
             "Modelo: $modelVersion"
 
-        modelText.textSize = 11f
-
-        modelText.setTextColor(
-            Color.GRAY
-        )
-
-        modelText.setPadding(
-            0,
-            18,
-            0,
-            0
-        )
+        modelText.textSize = 16f
+        modelText.setTextColor(Color.GRAY)
+        modelText.setPadding(0, 10, 0, 0)
 
         card.addView(modelText)
 
-        return card
+        predictionsContainer.addView(card)
     }
 
-    private fun readString(
-        obj: JSONObject?,
-        vararg names: String
-    ): String {
-
-        if (obj == null) {
-            return ""
-        }
-
-        for (name in names) {
-
-            if (obj.has(name)) {
-
-                val value =
-                    obj.opt(name)
-
-                if (
-                    value != null &&
-                    value != JSONObject.NULL
-                ) {
-
-                    val text =
-                        value.toString()
-
-                    if (text.isNotBlank()) {
-                        return text
-                    }
-                }
-            }
-        }
-
-        return ""
-    }
-
-    private fun readLong(
-        obj: JSONObject?,
-        vararg names: String
-    ): Long {
-
-        if (obj == null) {
-            return 0L
-        }
-
-        for (name in names) {
-
-            if (obj.has(name)) {
-
-                val value =
-                    obj.opt(name)
-
-                if (value is Number) {
-                    return value.toLong()
-                }
-
-                val text =
-                    value?.toString()
-
-                val parsed =
-                    text?.toLongOrNull()
-
-                if (parsed != null) {
-                    return parsed
-                }
-            }
-        }
-
-        return 0L
-    }
-
-    private fun readProbability(
-        obj: JSONObject?,
-        vararg names: String
-    ): Double {
-
-        if (obj == null) {
-            return 0.0
-        }
-
-        for (name in names) {
-
-            if (!obj.has(name)) {
-                continue
-            }
-
-            val value =
-                obj.opt(name)
-
-            val number =
-                when (value) {
-
-                    is Number ->
-                        value.toDouble()
-
-                    else ->
-                        value
-                            ?.toString()
-                            ?.replace("%", "")
-                            ?.replace(",", ".")
-                            ?.toDoubleOrNull()
-                            ?: 0.0
-                }
-
-            if (number > 1.0) {
-                return number / 100.0
-            }
-
-            if (number >= 0.0) {
-                return number
-            }
-        }
-
-        return 0.0
-    }
-
-    private fun createProbabilityRow(
+    private fun addProbabilityRow(
+        parent: LinearLayout,
         label: String,
         probability: Double
-    ): View {
+    ) {
 
-        val row =
-            LinearLayout(this)
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = Gravity.CENTER_VERTICAL
 
-        row.orientation =
-            LinearLayout.HORIZONTAL
+        val labelText = TextView(this)
 
-        row.gravity =
-            Gravity.CENTER_VERTICAL
-
-        row.setPadding(
-            0,
-            6,
-            0,
-            6
-        )
-
-        val labelText =
-            TextView(this)
-
-        labelText.text =
-            label
-
-        labelText.textSize = 15f
-
+        labelText.text = label
+        labelText.textSize = 20f
         labelText.setTextColor(
-            Color.DKGRAY
+            Color.rgb(45, 45, 45)
         )
 
         val labelParams =
             LinearLayout.LayoutParams(
                 0,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
             )
-
-        labelParams.weight = 1f
 
         row.addView(
             labelText,
             labelParams
         )
 
-        val percentageText =
-            TextView(this)
+        val valueText = TextView(this)
 
-        percentageText.text =
-            formatPercent(probability) +
-                    "%"
+        valueText.text =
+            formatPercent(probability)
 
-        percentageText.textSize = 15f
-
-        percentageText.setTextColor(
-            Color.rgb(20, 35, 55)
-        )
-
-        percentageText.setTypeface(
+        valueText.textSize = 20f
+        valueText.setTypeface(
             null,
             Typeface.BOLD
         )
+        valueText.setTextColor(
+            Color.rgb(25, 45, 70)
+        )
+        valueText.gravity = Gravity.END
 
         row.addView(
-            percentageText
+            valueText,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
 
-        return row
+        parent.addView(
+            row,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
     }
 
-    private fun formatPercent(
-        value: Double
-    ): String {
+    private fun addErrorCard(message: String) {
+
+        val errorText = TextView(this)
+
+        errorText.text =
+            "Error: $message"
+
+        errorText.textSize = 16f
+        errorText.setTextColor(
+            Color.rgb(180, 50, 50)
+        )
+        errorText.setPadding(
+            16,
+            16,
+            16,
+            16
+        )
+
+        predictionsContainer.addView(
+            errorText,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+    }
+
+    private fun formatPercent(value: Double): String {
 
         return String.format(
             Locale.US,
-            "%.2f",
+            "%.2f%%",
             value * 100.0
         )
     }
 
-    private fun formatDate(
-        value: String
-    ): String {
+    private fun formatDate(value: String): String {
 
         if (value.isBlank()) {
             return "Fecha no disponible"
@@ -790,51 +602,29 @@ class MainActivity : Activity() {
 
         return try {
 
-            val formats = arrayOf(
-                "yyyy-MM-dd'T'HH:mm:ssXXX",
-                "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
-                "yyyy-MM-dd'T'HH:mm:ss'Z'",
-                "yyyy-MM-dd HH:mm:ss"
-            )
-
-            var date: java.util.Date? = null
-
-            for (pattern in formats) {
-
-                try {
-
-                    val input =
-                        SimpleDateFormat(
-                            pattern,
-                            Locale.US
-                        )
-
-                    input.timeZone =
-                        TimeZone.getTimeZone("UTC")
-
-                    date =
-                        input.parse(value)
-
-                    if (date != null) {
-                        break
-                    }
-
-                } catch (_: Exception) {
-                    // Intentar el siguiente formato.
-                }
-            }
-
-            if (date == null) {
-                return value
-            }
-
-            val output =
+            val inputFormat =
                 SimpleDateFormat(
-                    "dd/MM/yyyy HH:mm",
-                    Locale("es", "EC")
+                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                    Locale.US
                 )
 
-            output.format(date)
+            inputFormat.timeZone =
+                TimeZone.getTimeZone("UTC")
+
+            val date: Date =
+                inputFormat.parse(value)
+                    ?: return value
+
+            val outputFormat =
+                SimpleDateFormat(
+                    "dd/MM/yyyy HH:mm",
+                    Locale.US
+                )
+
+            outputFormat.timeZone =
+                TimeZone.getDefault()
+
+            outputFormat.format(date)
 
         } catch (_: Exception) {
 
@@ -842,9 +632,54 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun httpGet(urlString: String): String {
+
+        val url = URL(urlString)
+
+        val connection =
+            url.openConnection()
+                as HttpURLConnection
+
+        connection.requestMethod = "GET"
+        connection.connectTimeout = 20000
+        connection.readTimeout = 30000
+        connection.useCaches = false
+
+        return try {
+
+            val responseCode =
+                connection.responseCode
+
+            val stream =
+                if (responseCode in 200..299) {
+                    connection.inputStream
+                } else {
+                    connection.errorStream
+                }
+
+            val body =
+                stream?.bufferedReader()?.use {
+                    it.readText()
+                } ?: ""
+
+            if (responseCode !in 200..299) {
+
+                throw Exception(
+                    "HTTP $responseCode: $body"
+                )
+            }
+
+            body
+
+        } finally {
+
+            connection.disconnect()
+        }
+    }
+
     override fun onDestroy() {
 
-        executor.shutdown()
+        executor.shutdownNow()
 
         super.onDestroy()
     }

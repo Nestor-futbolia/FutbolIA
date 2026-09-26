@@ -1,9 +1,11 @@
 package com.futbolia.app
 
+import android.app.Activity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
+import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -12,7 +14,6 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -21,7 +22,7 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     companion object {
         private const val API_URL =
@@ -29,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var container: LinearLayout
-    private lateinit var progress: ProgressBar
+    private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -38,19 +39,21 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        buildInterface()
+        createInterface()
 
         loadPredictions()
     }
 
-    private fun buildInterface() {
+    private fun createInterface() {
 
         val scrollView = ScrollView(this)
 
         container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 40, 32, 40)
-            setBackgroundColor(Color.rgb(245, 247, 250))
+            setBackgroundColor(
+                Color.rgb(245, 247, 250)
+            )
         }
 
         scrollView.addView(container)
@@ -60,9 +63,14 @@ class MainActivity : AppCompatActivity() {
         val title = TextView(this).apply {
             text = "⚽ FÚTBOL IA"
             textSize = 30f
-            setTextColor(Color.rgb(20, 35, 55))
+            setTextColor(
+                Color.rgb(20, 35, 55)
+            )
             gravity = Gravity.CENTER
-            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTypeface(
+                null,
+                Typeface.BOLD
+            )
         }
 
         container.addView(
@@ -83,22 +91,25 @@ class MainActivity : AppCompatActivity() {
 
         container.addView(subtitle)
 
-        progress = ProgressBar(this).apply {
+        progressBar = ProgressBar(this).apply {
             visibility = View.VISIBLE
         }
 
-        container.addView(
-            progress,
+        val progressParams =
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.CENTER
-            }
+            )
+
+        progressParams.gravity = Gravity.CENTER
+
+        container.addView(
+            progressBar,
+            progressParams
         )
 
         statusText = TextView(this).apply {
-            text = "Cargando predicciones..."
+            text = "Conectando con Fútbol IA..."
             textSize = 15f
             setTextColor(Color.DKGRAY)
             gravity = Gravity.CENTER
@@ -109,6 +120,7 @@ class MainActivity : AppCompatActivity() {
 
         val refreshButton = Button(this).apply {
             text = "Actualizar predicciones"
+
             setOnClickListener {
                 loadPredictions()
             }
@@ -125,21 +137,31 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadPredictions() {
 
-        progress.visibility = View.VISIBLE
-        statusText.text = "Consultando la IA..."
-        statusText.setTextColor(Color.DKGRAY)
+        progressBar.visibility = View.VISIBLE
+
+        statusText.text =
+            "Consultando predicciones de la IA..."
+
+        statusText.setTextColor(
+            Color.DKGRAY
+        )
 
         executor.execute {
 
+            var connection: HttpURLConnection? = null
+
             try {
 
-                val connection =
+                connection =
                     URL(API_URL).openConnection()
                         as HttpURLConnection
 
                 connection.requestMethod = "GET"
+
                 connection.connectTimeout = 30000
+
                 connection.readTimeout = 30000
+
                 connection.setRequestProperty(
                     "Accept",
                     "application/json"
@@ -148,22 +170,28 @@ class MainActivity : AppCompatActivity() {
                 val responseCode =
                     connection.responseCode
 
-                val stream =
-                    if (responseCode in 200..299) {
+                val inputStream =
+                    if (responseCode >= 200 &&
+                        responseCode < 300
+                    ) {
                         connection.inputStream
                     } else {
                         connection.errorStream
                     }
 
                 val response =
-                    stream.bufferedReader()
-                        .use { it.readText() }
+                    inputStream
+                        ?.bufferedReader()
+                        ?.use {
+                            it.readText()
+                        }
+                        ?: ""
 
-                connection.disconnect()
+                if (responseCode < 200 ||
+                    responseCode >= 300
+                ) {
 
-                if (responseCode !in 200..299) {
-
-                    throw RuntimeException(
+                    throw Exception(
                         "Servidor HTTP $responseCode"
                     )
                 }
@@ -173,16 +201,18 @@ class MainActivity : AppCompatActivity() {
 
                 mainHandler.post {
 
-                    progress.visibility = View.GONE
+                    progressBar.visibility =
+                        View.GONE
 
                     showPredictions(json)
                 }
 
-            } catch (exception: Exception) {
+            } catch (error: Exception) {
 
                 mainHandler.post {
 
-                    progress.visibility = View.GONE
+                    progressBar.visibility =
+                        View.GONE
 
                     statusText.text =
                         "No se pudieron cargar las predicciones."
@@ -193,10 +223,14 @@ class MainActivity : AppCompatActivity() {
 
                     Toast.makeText(
                         this,
-                        "Error: ${exception.message}",
+                        "Error: ${error.message}",
                         Toast.LENGTH_LONG
                     ).show()
                 }
+
+            } finally {
+
+                connection?.disconnect()
             }
         }
     }
@@ -208,41 +242,46 @@ class MainActivity : AppCompatActivity() {
         val details =
             json.optJSONArray("details")
 
-        if (
-            details == null ||
+        if (details == null ||
             details.length() == 0
         ) {
 
             statusText.text =
                 "No hay predicciones disponibles."
 
+            statusText.setTextColor(
+                Color.DKGRAY
+            )
+
             return
         }
 
         statusText.text =
-            "Predicciones generadas por la IA"
+            "Predicciones reales de la IA"
 
         statusText.setTextColor(
             Color.rgb(30, 120, 70)
         )
 
-        // Elimina las tarjetas anteriores,
-        // conservando título, subtítulo,
-        // barra y botón.
-        while (container.childCount > 4) {
-            container.removeViewAt(4)
-        }
+        removeOldCards()
 
-        for (index in 0 until details.length()) {
+        for (i in 0 until details.length()) {
 
             val item =
-                details.optJSONObject(index)
+                details.optJSONObject(i)
                     ?: continue
 
             val card =
                 createPredictionCard(item)
 
             container.addView(card)
+        }
+    }
+
+    private fun removeOldCards() {
+
+        while (container.childCount > 5) {
+            container.removeViewAt(5)
         }
     }
 
@@ -253,13 +292,7 @@ class MainActivity : AppCompatActivity() {
         val matchId =
             item.optLong(
                 "match_id",
-                0
-            )
-
-        val prediction =
-            item.optString(
-                "prediction",
-                "N/D"
+                0L
             )
 
         val startingAt =
@@ -268,28 +301,11 @@ class MainActivity : AppCompatActivity() {
                 ""
             )
 
-        val percentages =
-            item.optJSONObject(
-                "probabilities"
+        val prediction =
+            item.optString(
+                "prediction",
+                "N/D"
             )
-
-        val home =
-            percentages?.optDouble(
-                "home",
-                0.0
-            ) ?: 0.0
-
-        val draw =
-            percentages?.optDouble(
-                "draw",
-                0.0
-            ) ?: 0.0
-
-        val away =
-            percentages?.optDouble(
-                "away",
-                0.0
-            ) ?: 0.0
 
         val predictionPercentage =
             item.optDouble(
@@ -300,8 +316,31 @@ class MainActivity : AppCompatActivity() {
         val modelVersion =
             item.optString(
                 "model_version",
-                ""
+                "N/D"
             )
+
+        val probabilities =
+            item.optJSONObject(
+                "probabilities"
+            )
+
+        val home =
+            probabilities?.optDouble(
+                "home",
+                0.0
+            ) ?: 0.0
+
+        val draw =
+            probabilities?.optDouble(
+                "draw",
+                0.0
+            ) ?: 0.0
+
+        val away =
+            probabilities?.optDouble(
+                "away",
+                0.0
+            ) ?: 0.0
 
         val card =
             LinearLayout(this).apply {
@@ -320,281 +359,9 @@ class MainActivity : AppCompatActivity() {
                     Color.WHITE
                 )
 
-                elevation = 8f
+                elevation = 6f
             }
 
-        val marginParams =
+        val cardParams =
             LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-
-                setMargins(
-                    0,
-                    24,
-                    0,
-                    0
-                )
-            }
-
-        val matchTitle =
-            TextView(this).apply {
-
-                text =
-                    "Partido #$matchId"
-
-                textSize = 20f
-
-                setTextColor(
-                    Color.rgb(20, 35, 55)
-                )
-
-                setTypeface(
-                    null,
-                    android.graphics.Typeface.BOLD
-                )
-            }
-
-        card.addView(matchTitle)
-
-        val dateText =
-            TextView(this).apply {
-
-                text =
-                    formatDate(startingAt)
-
-                textSize = 14f
-
-                setTextColor(
-                    Color.GRAY
-                )
-
-                setPadding(
-                    0,
-                    8,
-                    0,
-                    16
-                )
-            }
-
-        card.addView(dateText)
-
-        val predictionTitle =
-            TextView(this).apply {
-
-                text =
-                    "Predicción IA: $prediction"
-
-                textSize = 22f
-
-                setTextColor(
-                    Color.rgb(20, 120, 70)
-                )
-
-                setTypeface(
-                    null,
-                    android.graphics.Typeface.BOLD
-                )
-            }
-
-        card.addView(predictionTitle)
-
-        val confidence =
-            TextView(this).apply {
-
-                text =
-                    "Probabilidad: " +
-                    "${formatPercent(predictionPercentage)}%"
-
-                textSize = 16f
-
-                setTextColor(
-                    Color.DKGRAY
-                )
-
-                setPadding(
-                    0,
-                    8,
-                    0,
-                    16
-                )
-            }
-
-        card.addView(confidence)
-
-        card.addView(
-            probabilityRow(
-                "Local",
-                home
-            )
-        )
-
-        card.addView(
-            probabilityRow(
-                "Empate",
-                draw
-            )
-        )
-
-        card.addView(
-            probabilityRow(
-                "Visitante",
-                away
-            )
-        )
-
-        val modelText =
-            TextView(this).apply {
-
-                text =
-                    "Modelo: $modelVersion"
-
-                textSize = 11f
-
-                setTextColor(
-                    Color.GRAY
-                )
-
-                setPadding(
-                    0,
-                    18,
-                    0,
-                    0
-                )
-            }
-
-        card.addView(modelText)
-
-        card.layoutParams =
-            marginParams
-
-        return card
-    }
-
-    private fun probabilityRow(
-        label: String,
-        value: Double
-    ): View {
-
-        val row =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.HORIZONTAL
-
-                gravity =
-                    Gravity.CENTER_VERTICAL
-
-                setPadding(
-                    0,
-                    6,
-                    0,
-                    6
-                )
-            }
-
-        val labelText =
-            TextView(this).apply {
-
-                text =
-                    label
-
-                textSize = 15f
-
-                setTextColor(
-                    Color.DKGRAY
-                )
-
-                layoutParams =
-                    LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1f
-                    )
-            }
-
-        row.addView(labelText)
-
-        val valueText =
-            TextView(this).apply {
-
-                text =
-                    "${formatPercent(value)}%"
-
-                textSize = 15f
-
-                setTypeface(
-                    null,
-                    android.graphics.Typeface.BOLD
-                )
-
-                setTextColor(
-                    Color.rgb(20, 35, 55)
-                )
-            }
-
-        row.addView(valueText)
-
-        return row
-    }
-
-    private fun formatPercent(
-        value: Double
-    ): String {
-
-        return String.format(
-            Locale.US,
-            "%.2f",
-            value * 100.0
-        )
-    }
-
-    private fun formatDate(
-        value: String
-    ): String {
-
-        if (value.isBlank()) {
-            return "Fecha no disponible"
-        }
-
-        return try {
-
-            val input =
-                SimpleDateFormat(
-                    "yyyy-MM-dd'T'HH:mm:ssXXX",
-                    Locale.US
-                )
-
-            input.timeZone =
-                TimeZone.getTimeZone("UTC")
-
-            val date =
-                input.parse(value)
-
-            val output =
-                SimpleDateFormat(
-                    "dd/MM/yyyy HH:mm",
-                    Locale("es", "EC")
-                )
-
-            if (date != null) {
-                output.format(date)
-            } else {
-                value
-            }
-
-        } catch (
-            exception: Exception
-        ) {
-
-            value
-        }
-    }
-
-    override fun onDestroy() {
-
-        executor.shutdown()
-
-        super.onDestroy()
-    }
-}
+                LinearLayout.LayoutParams.MATCH_PARENT

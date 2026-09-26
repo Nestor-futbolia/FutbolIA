@@ -1,11 +1,11 @@
 package com.futbolia.app
 
 import android.app.Activity
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.graphics.Color
-import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -29,7 +29,8 @@ class MainActivity : Activity() {
             "https://futbolia-backend-we7w.onrender.com/ai/predict/upcoming?limit=10"
     }
 
-    private lateinit var container: LinearLayout
+    private lateinit var mainContainer: LinearLayout
+    private lateinit var predictionsContainer: LinearLayout
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
 
@@ -40,7 +41,6 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         createInterface()
-
         loadPredictions()
     }
 
@@ -48,90 +48,127 @@ class MainActivity : Activity() {
 
         val scrollView = ScrollView(this)
 
-        container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(32, 40, 32, 40)
-            setBackgroundColor(
-                Color.rgb(245, 247, 250)
-            )
-        }
+        mainContainer = LinearLayout(this)
 
-        scrollView.addView(container)
+        mainContainer.orientation = LinearLayout.VERTICAL
+
+        mainContainer.setPadding(
+            32,
+            40,
+            32,
+            40
+        )
+
+        mainContainer.setBackgroundColor(
+            Color.rgb(245, 247, 250)
+        )
+
+        scrollView.addView(mainContainer)
 
         setContentView(scrollView)
 
-        val title = TextView(this).apply {
-            text = "⚽ FÚTBOL IA"
-            textSize = 30f
-            setTextColor(
-                Color.rgb(20, 35, 55)
-            )
-            gravity = Gravity.CENTER
-            setTypeface(
-                null,
-                Typeface.BOLD
-            )
-        }
+        val title = TextView(this)
 
-        container.addView(
-            title,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+        title.text = "⚽ FÚTBOL IA"
+        title.textSize = 30f
+
+        title.setTextColor(
+            Color.rgb(20, 35, 55)
         )
 
-        val subtitle = TextView(this).apply {
-            text = "Predicciones reales de inteligencia artificial"
-            textSize = 16f
-            setTextColor(Color.DKGRAY)
-            gravity = Gravity.CENTER
-            setPadding(0, 12, 0, 24)
-        }
+        title.gravity = Gravity.CENTER
 
-        container.addView(subtitle)
+        title.setTypeface(
+            null,
+            Typeface.BOLD
+        )
 
-        progressBar = ProgressBar(this).apply {
-            visibility = View.VISIBLE
-        }
+        mainContainer.addView(title)
 
-        val progressParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+        val subtitle = TextView(this)
+
+        subtitle.text =
+            "Predicciones reales de inteligencia artificial"
+
+        subtitle.textSize = 16f
+
+        subtitle.setTextColor(Color.DKGRAY)
+
+        subtitle.gravity = Gravity.CENTER
+
+        subtitle.setPadding(
+            0,
+            12,
+            0,
+            24
+        )
+
+        mainContainer.addView(subtitle)
+
+        progressBar = ProgressBar(this)
+
+        progressBar.visibility = View.VISIBLE
+
+        val progressParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
 
         progressParams.gravity = Gravity.CENTER
 
-        container.addView(
+        mainContainer.addView(
             progressBar,
             progressParams
         )
 
-        statusText = TextView(this).apply {
-            text = "Conectando con Fútbol IA..."
-            textSize = 15f
-            setTextColor(Color.DKGRAY)
-            gravity = Gravity.CENTER
-            setPadding(0, 16, 0, 16)
+        statusText = TextView(this)
+
+        statusText.text =
+            "Conectando con Fútbol IA..."
+
+        statusText.textSize = 15f
+
+        statusText.setTextColor(
+            Color.DKGRAY
+        )
+
+        statusText.gravity = Gravity.CENTER
+
+        statusText.setPadding(
+            0,
+            16,
+            0,
+            16
+        )
+
+        mainContainer.addView(statusText)
+
+        val refreshButton = Button(this)
+
+        refreshButton.text =
+            "Actualizar predicciones"
+
+        refreshButton.setOnClickListener {
+            loadPredictions()
         }
 
-        container.addView(statusText)
+        val buttonParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
 
-        val refreshButton = Button(this).apply {
-            text = "Actualizar predicciones"
-
-            setOnClickListener {
-                loadPredictions()
-            }
-        }
-
-        container.addView(
+        mainContainer.addView(
             refreshButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            buttonParams
+        )
+
+        predictionsContainer = LinearLayout(this)
+
+        predictionsContainer.orientation =
+            LinearLayout.VERTICAL
+
+        mainContainer.addView(
+            predictionsContainer
         )
     }
 
@@ -152,9 +189,10 @@ class MainActivity : Activity() {
 
             try {
 
+                val url = URL(API_URL)
+
                 connection =
-                    URL(API_URL).openConnection()
-                        as HttpURLConnection
+                    url.openConnection() as HttpURLConnection
 
                 connection.requestMethod = "GET"
 
@@ -171,7 +209,8 @@ class MainActivity : Activity() {
                     connection.responseCode
 
                 val inputStream =
-                    if (responseCode >= 200 &&
+                    if (
+                        responseCode >= 200 &&
                         responseCode < 300
                     ) {
                         connection.inputStream
@@ -180,24 +219,26 @@ class MainActivity : Activity() {
                     }
 
                 val response =
-                    inputStream
-                        ?.bufferedReader()
-                        ?.use {
-                            it.readText()
-                        }
-                        ?: ""
+                    if (inputStream != null) {
+                        inputStream
+                            .bufferedReader()
+                            .use {
+                                it.readText()
+                            }
+                    } else {
+                        ""
+                    }
 
-                if (responseCode < 200 ||
+                if (
+                    responseCode < 200 ||
                     responseCode >= 300
                 ) {
-
                     throw Exception(
                         "Servidor HTTP $responseCode"
                     )
                 }
 
-                val json =
-                    JSONObject(response)
+                val json = JSONObject(response)
 
                 mainHandler.post {
 
@@ -239,10 +280,13 @@ class MainActivity : Activity() {
         json: JSONObject
     ) {
 
+        predictionsContainer.removeAllViews()
+
         val details =
             json.optJSONArray("details")
 
-        if (details == null ||
+        if (
+            details == null ||
             details.length() == 0
         ) {
 
@@ -263,25 +307,20 @@ class MainActivity : Activity() {
             Color.rgb(30, 120, 70)
         )
 
-        removeOldCards()
-
-        for (i in 0 until details.length()) {
+        for (
+            index in 0 until details.length()
+        ) {
 
             val item =
-                details.optJSONObject(i)
-                    ?: continue
+                details.optJSONObject(index)
 
-            val card =
-                createPredictionCard(item)
+            if (item != null) {
 
-            container.addView(card)
-        }
-    }
+                val card =
+                    createPredictionCard(item)
 
-    private fun removeOldCards() {
-
-        while (container.childCount > 5) {
-            container.removeViewAt(5)
+                predictionsContainer.addView(card)
+            }
         }
     }
 
@@ -325,43 +364,320 @@ class MainActivity : Activity() {
             )
 
         val home =
-            probabilities?.optDouble(
-                "home",
+            if (probabilities != null) {
+                probabilities.optDouble(
+                    "home",
+                    0.0
+                )
+            } else {
                 0.0
-            ) ?: 0.0
+            }
 
         val draw =
-            probabilities?.optDouble(
-                "draw",
+            if (probabilities != null) {
+                probabilities.optDouble(
+                    "draw",
+                    0.0
+                )
+            } else {
                 0.0
-            ) ?: 0.0
+            }
 
         val away =
-            probabilities?.optDouble(
-                "away",
+            if (probabilities != null) {
+                probabilities.optDouble(
+                    "away",
+                    0.0
+                )
+            } else {
                 0.0
-            ) ?: 0.0
+            }
 
         val card =
-            LinearLayout(this).apply {
+            LinearLayout(this)
 
-                orientation =
-                    LinearLayout.VERTICAL
+        card.orientation =
+            LinearLayout.VERTICAL
 
-                setPadding(
-                    28,
-                    24,
-                    28,
-                    24
-                )
+        card.setPadding(
+            28,
+            24,
+            28,
+            24
+        )
 
-                setBackgroundColor(
-                    Color.WHITE
-                )
+        card.setBackgroundColor(
+            Color.WHITE
+        )
 
-                elevation = 6f
-            }
+        card.elevation = 6f
 
         val cardParams =
             LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        cardParams.setMargins(
+            0,
+            24,
+            0,
+            0
+        )
+
+        card.layoutParams = cardParams
+
+        val matchText =
+            TextView(this)
+
+        matchText.text =
+            "Partido #$matchId"
+
+        matchText.textSize = 20f
+
+        matchText.setTextColor(
+            Color.rgb(20, 35, 55)
+        )
+
+        matchText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        card.addView(matchText)
+
+        val dateText =
+            TextView(this)
+
+        dateText.text =
+            formatDate(startingAt)
+
+        dateText.textSize = 14f
+
+        dateText.setTextColor(
+            Color.GRAY
+        )
+
+        dateText.setPadding(
+            0,
+            8,
+            0,
+            16
+        )
+
+        card.addView(dateText)
+
+        val predictionText =
+            TextView(this)
+
+        predictionText.text =
+            "Predicción IA: $prediction"
+
+        predictionText.textSize = 22f
+
+        predictionText.setTextColor(
+            Color.rgb(20, 120, 70)
+        )
+
+        predictionText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        card.addView(predictionText)
+
+        val confidenceText =
+            TextView(this)
+
+        confidenceText.text =
+            "Probabilidad: " +
+            formatPercent(
+                predictionPercentage
+            ) +
+            "%"
+
+        confidenceText.textSize = 17f
+
+        confidenceText.setTextColor(
+            Color.DKGRAY
+        )
+
+        confidenceText.setPadding(
+            0,
+            8,
+            0,
+            16
+        )
+
+        card.addView(confidenceText)
+
+        card.addView(
+            createProbabilityRow(
+                "Local",
+                home
+            )
+        )
+
+        card.addView(
+            createProbabilityRow(
+                "Empate",
+                draw
+            )
+        )
+
+        card.addView(
+            createProbabilityRow(
+                "Visitante",
+                away
+            )
+        )
+
+        val modelText =
+            TextView(this)
+
+        modelText.text =
+            "Modelo: $modelVersion"
+
+        modelText.textSize = 11f
+
+        modelText.setTextColor(
+            Color.GRAY
+        )
+
+        modelText.setPadding(
+            0,
+            18,
+            0,
+            0
+        )
+
+        card.addView(modelText)
+
+        return card
+    }
+
+    private fun createProbabilityRow(
+        label: String,
+        probability: Double
+    ): View {
+
+        val row =
+            LinearLayout(this)
+
+        row.orientation =
+            LinearLayout.HORIZONTAL
+
+        row.gravity =
+            Gravity.CENTER_VERTICAL
+
+        row.setPadding(
+            0,
+            6,
+            0,
+            6
+        )
+
+        val labelText =
+            TextView(this)
+
+        labelText.text = label
+
+        labelText.textSize = 15f
+
+        labelText.setTextColor(
+            Color.DKGRAY
+        )
+
+        val labelParams =
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        labelParams.weight = 1f
+
+        row.addView(
+            labelText,
+            labelParams
+        )
+
+        val percentageText =
+            TextView(this)
+
+        percentageText.text =
+            formatPercent(probability) + "%"
+
+        percentageText.textSize = 15f
+
+        percentageText.setTextColor(
+            Color.rgb(20, 35, 55)
+        )
+
+        percentageText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        row.addView(percentageText)
+
+        return row
+    }
+
+    private fun formatPercent(
+        value: Double
+    ): String {
+
+        return String.format(
+            Locale.US,
+            "%.2f",
+            value * 100.0
+        )
+    }
+
+    private fun formatDate(
+        value: String
+    ): String {
+
+        if (value.isBlank()) {
+            return "Fecha no disponible"
+        }
+
+        return try {
+
+            val input =
+                SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                    Locale.US
+                )
+
+            input.timeZone =
+                TimeZone.getTimeZone("UTC")
+
+            val date =
+                input.parse(value)
+
+            if (date == null) {
+                return value
+            }
+
+            val output =
+                SimpleDateFormat(
+                    "dd/MM/yyyy HH:mm",
+                    Locale("es", "EC")
+                )
+
+            output.format(date)
+
+        } catch (error: Exception) {
+
+            value
+        }
+    }
+
+    override fun onDestroy() {
+
+        executor.shutdown()
+
+        super.onDestroy()
+    }
+}

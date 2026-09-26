@@ -14,6 +14,7 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -49,7 +50,6 @@ class MainActivity : Activity() {
         val scrollView = ScrollView(this)
 
         mainContainer = LinearLayout(this)
-
         mainContainer.orientation = LinearLayout.VERTICAL
 
         mainContainer.setPadding(
@@ -71,7 +71,6 @@ class MainActivity : Activity() {
 
         title.text = "⚽ FÚTBOL IA"
         title.textSize = 30f
-
         title.setTextColor(
             Color.rgb(20, 35, 55)
         )
@@ -91,9 +90,7 @@ class MainActivity : Activity() {
             "Predicciones reales de inteligencia artificial"
 
         subtitle.textSize = 16f
-
         subtitle.setTextColor(Color.DKGRAY)
-
         subtitle.gravity = Gravity.CENTER
 
         subtitle.setPadding(
@@ -127,11 +124,7 @@ class MainActivity : Activity() {
             "Conectando con Fútbol IA..."
 
         statusText.textSize = 15f
-
-        statusText.setTextColor(
-            Color.DKGRAY
-        )
-
+        statusText.setTextColor(Color.DKGRAY)
         statusText.gravity = Gravity.CENTER
 
         statusText.setPadding(
@@ -195,9 +188,7 @@ class MainActivity : Activity() {
                     url.openConnection() as HttpURLConnection
 
                 connection.requestMethod = "GET"
-
                 connection.connectTimeout = 30000
-
                 connection.readTimeout = 30000
 
                 connection.setRequestProperty(
@@ -283,7 +274,7 @@ class MainActivity : Activity() {
         predictionsContainer.removeAllViews()
 
         val details =
-            json.optJSONArray("details")
+            findDetailsArray(json)
 
         if (
             details == null ||
@@ -301,7 +292,7 @@ class MainActivity : Activity() {
         }
 
         statusText.text =
-            "Predicciones reales de la IA"
+            "Predicciones reales de la IA: ${details.length()}"
 
         statusText.setTextColor(
             Color.rgb(30, 120, 70)
@@ -324,39 +315,84 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun findDetailsArray(
+        json: JSONObject
+    ): JSONArray? {
+
+        val possibleNames = arrayOf(
+            "details",
+            "predictions",
+            "matches",
+            "data",
+            "results"
+        )
+
+        for (name in possibleNames) {
+
+            val array =
+                json.optJSONArray(name)
+
+            if (array != null) {
+                return array
+            }
+        }
+
+        return null
+    }
+
     private fun createPredictionCard(
         item: JSONObject
     ): View {
 
         val matchId =
-            item.optLong(
+            readLong(
+                item,
                 "match_id",
-                0L
+                "fixture_id",
+                "id"
             )
 
         val startingAt =
-            item.optString(
+            readString(
+                item,
                 "starting_at",
-                ""
+                "startingAt",
+                "fixture_date",
+                "date",
+                "match_date"
             )
 
         val prediction =
-            item.optString(
+            readString(
+                item,
                 "prediction",
+                "predicted",
+                "result",
+                "selection",
+                "pick"
+            ).ifBlank {
                 "N/D"
-            )
+            }
 
         val predictionPercentage =
-            item.optDouble(
+            readProbability(
+                item,
                 "prediction_percentage",
-                0.0
+                "predictionPercentage",
+                "probability",
+                "confidence",
+                "percentage"
             )
 
         val modelVersion =
-            item.optString(
+            readString(
+                item,
                 "model_version",
+                "modelVersion",
+                "version"
+            ).ifBlank {
                 "N/D"
-            )
+            }
 
         val probabilities =
             item.optJSONObject(
@@ -364,34 +400,28 @@ class MainActivity : Activity() {
             )
 
         val home =
-            if (probabilities != null) {
-                probabilities.optDouble(
-                    "home",
-                    0.0
-                )
-            } else {
-                0.0
-            }
+            readProbability(
+                probabilities,
+                "home",
+                "local",
+                "HOME"
+            )
 
         val draw =
-            if (probabilities != null) {
-                probabilities.optDouble(
-                    "draw",
-                    0.0
-                )
-            } else {
-                0.0
-            }
+            readProbability(
+                probabilities,
+                "draw",
+                "empate",
+                "DRAW"
+            )
 
         val away =
-            if (probabilities != null) {
-                probabilities.optDouble(
-                    "away",
-                    0.0
-                )
-            } else {
-                0.0
-            }
+            readProbability(
+                probabilities,
+                "away",
+                "visitante",
+                "AWAY"
+            )
 
         val card =
             LinearLayout(this)
@@ -491,10 +521,8 @@ class MainActivity : Activity() {
 
         confidenceText.text =
             "Probabilidad: " +
-            formatPercent(
-                predictionPercentage
-            ) +
-            "%"
+                    formatPercent(predictionPercentage) +
+                    "%"
 
         confidenceText.textSize = 17f
 
@@ -556,6 +584,120 @@ class MainActivity : Activity() {
         return card
     }
 
+    private fun readString(
+        obj: JSONObject?,
+        vararg names: String
+    ): String {
+
+        if (obj == null) {
+            return ""
+        }
+
+        for (name in names) {
+
+            if (obj.has(name)) {
+
+                val value =
+                    obj.opt(name)
+
+                if (
+                    value != null &&
+                    value != JSONObject.NULL
+                ) {
+
+                    val text =
+                        value.toString()
+
+                    if (text.isNotBlank()) {
+                        return text
+                    }
+                }
+            }
+        }
+
+        return ""
+    }
+
+    private fun readLong(
+        obj: JSONObject?,
+        vararg names: String
+    ): Long {
+
+        if (obj == null) {
+            return 0L
+        }
+
+        for (name in names) {
+
+            if (obj.has(name)) {
+
+                val value =
+                    obj.opt(name)
+
+                if (value is Number) {
+                    return value.toLong()
+                }
+
+                val text =
+                    value?.toString()
+
+                val parsed =
+                    text?.toLongOrNull()
+
+                if (parsed != null) {
+                    return parsed
+                }
+            }
+        }
+
+        return 0L
+    }
+
+    private fun readProbability(
+        obj: JSONObject?,
+        vararg names: String
+    ): Double {
+
+        if (obj == null) {
+            return 0.0
+        }
+
+        for (name in names) {
+
+            if (!obj.has(name)) {
+                continue
+            }
+
+            val value =
+                obj.opt(name)
+
+            val number =
+                when (value) {
+
+                    is Number ->
+                        value.toDouble()
+
+                    else ->
+                        value
+                            ?.toString()
+                            ?.replace("%", "")
+                            ?.replace(",", ".")
+                            ?.toDoubleOrNull()
+                            ?: 0.0
+                }
+
+            if (number > 1.0) {
+                return number / 100.0
+            }
+
+            if (number >= 0.0) {
+                return number
+            }
+        }
+
+        return 0.0
+    }
+
     private fun createProbabilityRow(
         label: String,
         probability: Double
@@ -580,7 +722,8 @@ class MainActivity : Activity() {
         val labelText =
             TextView(this)
 
-        labelText.text = label
+        labelText.text =
+            label
 
         labelText.textSize = 15f
 
@@ -605,7 +748,8 @@ class MainActivity : Activity() {
             TextView(this)
 
         percentageText.text =
-            formatPercent(probability) + "%"
+            formatPercent(probability) +
+                    "%"
 
         percentageText.textSize = 15f
 
@@ -618,7 +762,9 @@ class MainActivity : Activity() {
             Typeface.BOLD
         )
 
-        row.addView(percentageText)
+        row.addView(
+            percentageText
+        )
 
         return row
     }
@@ -644,17 +790,39 @@ class MainActivity : Activity() {
 
         return try {
 
-            val input =
-                SimpleDateFormat(
-                    "yyyy-MM-dd'T'HH:mm:ssXXX",
-                    Locale.US
-                )
+            val formats = arrayOf(
+                "yyyy-MM-dd'T'HH:mm:ssXXX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd HH:mm:ss"
+            )
 
-            input.timeZone =
-                TimeZone.getTimeZone("UTC")
+            var date: java.util.Date? = null
 
-            val date =
-                input.parse(value)
+            for (pattern in formats) {
+
+                try {
+
+                    val input =
+                        SimpleDateFormat(
+                            pattern,
+                            Locale.US
+                        )
+
+                    input.timeZone =
+                        TimeZone.getTimeZone("UTC")
+
+                    date =
+                        input.parse(value)
+
+                    if (date != null) {
+                        break
+                    }
+
+                } catch (_: Exception) {
+                    // Intentar el siguiente formato.
+                }
+            }
 
             if (date == null) {
                 return value
@@ -668,7 +836,7 @@ class MainActivity : Activity() {
 
             output.format(date)
 
-        } catch (error: Exception) {
+        } catch (_: Exception) {
 
             value
         }

@@ -6,7 +6,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 
 class FutbolApi {
 
@@ -27,15 +26,16 @@ class FutbolApi {
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 20_000
                 connection.readTimeout = 30_000
+
                 connection.setRequestProperty(
                     "Accept",
                     "application/json"
                 )
 
-                val code = connection.responseCode
+                val responseCode = connection.responseCode
 
                 val stream =
-                    if (code in 200..299) {
+                    if (responseCode in 200..299) {
                         connection.inputStream
                     } else {
                         connection.errorStream
@@ -46,27 +46,18 @@ class FutbolApi {
                         it.readText()
                     } ?: ""
 
-                if (code !in 200..299) {
+                if (responseCode !in 200..299) {
                     throw Exception(
-                        "Servidor respondió HTTP $code: $body"
+                        "Error HTTP $responseCode"
                     )
                 }
 
                 body
+
             } finally {
                 connection.disconnect()
             }
         }
-
-    suspend fun health(): Boolean {
-        return try {
-            val response = get("/health")
-            JSONObject(response)
-                .optBoolean("ok", false)
-        } catch (_: Exception) {
-            false
-        }
-    }
 
     suspend fun getUpcomingPredictions(
         limit: Int = 10
@@ -81,12 +72,14 @@ class FutbolApi {
             root.optJSONArray("details")
                 ?: JSONArray()
 
-        val result = mutableListOf<PredictionDetail>()
+        val result =
+            mutableListOf<PredictionDetail>()
 
         for (i in 0 until details.length()) {
 
-            val item = details.optJSONObject(i)
-                ?: continue
+            val item =
+                details.optJSONObject(i)
+                    ?: continue
 
             if (!item.optBoolean("ok", false)) {
                 continue
@@ -100,28 +93,34 @@ class FutbolApi {
 
             result.add(
                 PredictionDetail(
+
                     matchId =
                         item.optInt("match_id"),
+
                     startingAt =
                         item.optString(
                             "starting_at",
                             null
                         ),
+
                     prediction =
                         item.optString(
                             "prediction",
                             "N/D"
                         ),
+
                     predictionProbability =
                         item.optDouble(
                             "prediction_probability",
                             0.0
                         ),
+
                     predictionPercentage =
                         item.optDouble(
                             "prediction_percentage",
                             0.0
                         ),
+
                     probabilities =
                         PredictionProbabilities(
                             home =
@@ -129,17 +128,20 @@ class FutbolApi {
                                     "home",
                                     0.0
                                 ) ?: 0.0,
+
                             draw =
                                 probabilities?.optDouble(
                                     "draw",
                                     0.0
                                 ) ?: 0.0,
+
                             away =
                                 probabilities?.optDouble(
                                     "away",
                                     0.0
                                 ) ?: 0.0
                         ),
+
                     percentages =
                         PredictionPercentages(
                             home =
@@ -147,17 +149,20 @@ class FutbolApi {
                                     "home",
                                     0.0
                                 ) ?: 0.0,
+
                             draw =
                                 percentages?.optDouble(
                                     "draw",
                                     0.0
                                 ) ?: 0.0,
+
                             away =
                                 percentages?.optDouble(
                                     "away",
                                     0.0
                                 ) ?: 0.0
                         ),
+
                     modelVersion =
                         item.optString(
                             "model_version",
@@ -187,28 +192,34 @@ class FutbolApi {
             root.optJSONObject("percentages")
 
         return PredictionDetail(
+
             matchId =
                 root.optInt("match_id"),
+
             startingAt =
                 root.optString(
                     "starting_at",
                     null
                 ),
+
             prediction =
                 root.optString(
                     "prediction",
                     "N/D"
                 ),
+
             predictionProbability =
                 root.optDouble(
                     "prediction_probability",
                     0.0
                 ),
+
             predictionPercentage =
                 root.optDouble(
                     "prediction_percentage",
                     0.0
                 ),
+
             probabilities =
                 PredictionProbabilities(
                     home =
@@ -216,17 +227,20 @@ class FutbolApi {
                             "home",
                             0.0
                         ) ?: 0.0,
+
                     draw =
                         probabilities?.optDouble(
                             "draw",
                             0.0
                         ) ?: 0.0,
+
                     away =
                         probabilities?.optDouble(
                             "away",
                             0.0
                         ) ?: 0.0
                 ),
+
             percentages =
                 PredictionPercentages(
                     home =
@@ -234,17 +248,20 @@ class FutbolApi {
                             "home",
                             0.0
                         ) ?: 0.0,
+
                     draw =
                         percentages?.optDouble(
                             "draw",
                             0.0
                         ) ?: 0.0,
+
                     away =
                         percentages?.optDouble(
                             "away",
                             0.0
                         ) ?: 0.0
                 ),
+
             modelVersion =
                 root.optString(
                     "model_version",
@@ -267,7 +284,8 @@ class FutbolApi {
             root.optJSONArray("response")
                 ?: JSONArray()
 
-        val result = mutableListOf<FixtureInfo>()
+        val result =
+            mutableListOf<FixtureInfo>()
 
         for (i in 0 until array.length()) {
 
@@ -297,57 +315,18 @@ class FutbolApi {
             val goals =
                 item.optJSONObject("goals")
 
-            val homeTeam =
-                TeamInfo(
-                    id =
-                        home.optInt("id"),
-                    name =
-                        home.optString(
-                            "name",
-                            "Local"
-                        ),
-                    code =
-                        home.optString(
-                            "code",
-                            null
-                        ),
-                    logo =
-                        home.optString(
-                            "logo",
-                            null
-                        )
-                )
-
-            val awayTeam =
-                TeamInfo(
-                    id =
-                        away.optInt("id"),
-                    name =
-                        away.optString(
-                            "name",
-                            "Visitante"
-                        ),
-                    code =
-                        away.optString(
-                            "code",
-                            null
-                        ),
-                    logo =
-                        away.optString(
-                            "logo",
-                            null
-                        )
-                )
-
             result.add(
                 FixtureInfo(
+
                     id =
                         fixture.optInt("id"),
+
                     startingAt =
                         fixture.optString(
                             "date",
                             null
                         ),
+
                     status =
                         fixture
                             .optJSONObject("status")
@@ -355,31 +334,79 @@ class FutbolApi {
                                 "short",
                                 null
                             ),
+
                     homeTeam =
-                        homeTeam,
+                        TeamInfo(
+                            id =
+                                home.optInt("id"),
+
+                            name =
+                                home.optString(
+                                    "name",
+                                    "Local"
+                                ),
+
+                            code =
+                                home.optString(
+                                    "code",
+                                    null
+                                ),
+
+                            logo =
+                                home.optString(
+                                    "logo",
+                                    null
+                                )
+                        ),
+
                     awayTeam =
-                        awayTeam,
+                        TeamInfo(
+                            id =
+                                away.optInt("id"),
+
+                            name =
+                                away.optString(
+                                    "name",
+                                    "Visitante"
+                                ),
+
+                            code =
+                                away.optString(
+                                    "code",
+                                    null
+                                ),
+
+                            logo =
+                                away.optString(
+                                    "logo",
+                                    null
+                                )
+                        ),
+
                     homeGoals =
                         if (
-                            goals?.isNull("home") != false
+                            goals?.isNull("home") == true
                         ) {
                             null
                         } else {
                             goals?.optInt("home")
                         },
+
                     awayGoals =
                         if (
-                            goals?.isNull("away") != false
+                            goals?.isNull("away") == true
                         ) {
                             null
                         } else {
                             goals?.optInt("away")
                         },
+
                     leagueName =
                         league?.optString(
                             "name",
                             null
                         ),
+
                     leagueCountry =
                         league?.optString(
                             "country",
@@ -437,13 +464,16 @@ class FutbolApi {
             item.optJSONObject("goals")
 
         return FixtureInfo(
+
             id =
                 fixture.optInt("id"),
+
             startingAt =
                 fixture.optString(
                     "date",
                     null
                 ),
+
             status =
                 fixture
                     .optJSONObject("status")
@@ -451,59 +481,75 @@ class FutbolApi {
                         "short",
                         null
                     ),
+
             homeTeam =
                 TeamInfo(
-                    id = home.optInt("id"),
+                    id =
+                        home.optInt("id"),
+
                     name =
                         home.optString(
                             "name",
                             "Local"
                         ),
+
                     code =
                         home.optString(
                             "code",
                             null
                         ),
+
                     logo =
                         home.optString(
                             "logo",
                             null
                         )
                 ),
+
             awayTeam =
                 TeamInfo(
-                    id = away.optInt("id"),
+                    id =
+                        away.optInt("id"),
+
                     name =
                         away.optString(
                             "name",
                             "Visitante"
                         ),
+
                     code =
                         away.optString(
                             "code",
                             null
                         ),
+
                     logo =
                         away.optString(
                             "logo",
                             null
                         )
                 ),
+
             homeGoals =
-                if (goals?.isNull("home") == true)
+                if (goals?.isNull("home") == true) {
                     null
-                else
-                    goals?.optInt("home"),
+                } else {
+                    goals?.optInt("home")
+                },
+
             awayGoals =
-                if (goals?.isNull("away") == true)
+                if (goals?.isNull("away") == true) {
                     null
-                else
-                    goals?.optInt("away"),
+                } else {
+                    goals?.optInt("away")
+                },
+
             leagueName =
                 league?.optString(
                     "name",
                     null
                 ),
+
             leagueCountry =
                 league?.optString(
                     "country",
@@ -521,26 +567,31 @@ class FutbolApi {
             JSONObject(response)
 
         return AiStatus(
+
             active =
                 root.optBoolean(
                     "active",
                     false
                 ),
+
             modelVersion =
                 root.optString(
                     "model_version",
                     null
                 ),
+
             modelName =
                 root.optString(
                     "model_name",
                     null
                 ),
+
             trainedAt =
                 root.optString(
                     "trained_at",
                     null
                 ),
+
             trainingMatches =
                 if (
                     root.has("training_matches")
@@ -551,11 +602,10 @@ class FutbolApi {
                 } else {
                     null
                 },
+
             validationAccuracy =
                 if (
-                    root.has(
-                        "validation_accuracy"
-                    )
+                    root.has("validation_accuracy")
                 ) {
                     root.optDouble(
                         "validation_accuracy"
@@ -563,11 +613,10 @@ class FutbolApi {
                 } else {
                     null
                 },
+
             validationLogLoss =
                 if (
-                    root.has(
-                        "validation_log_loss"
-                    )
+                    root.has("validation_log_loss")
                 ) {
                     root.optDouble(
                         "validation_log_loss"
@@ -587,26 +636,26 @@ class FutbolApi {
             JSONObject(response)
 
         return AiPerformance(
+
             evaluatedMatches =
                 root.optInt(
                     "evaluated_matches",
                     0
                 ),
+
             correctMatches =
                 root.optInt(
                     "correct_matches",
                     0
                 ),
+
             accuracy =
-                if (
-                    root.has("accuracy")
-                ) {
-                    root.optDouble(
-                        "accuracy"
-                    )
+                if (root.has("accuracy")) {
+                    root.optDouble("accuracy")
                 } else {
                     null
                 },
+
             accuracyPercent =
                 if (
                     root.has("accuracy_percent")
@@ -617,16 +666,14 @@ class FutbolApi {
                 } else {
                     null
                 },
+
             logLoss =
-                if (
-                    root.has("log_loss")
-                ) {
-                    root.optDouble(
-                        "log_loss"
-                    )
+                if (root.has("log_loss")) {
+                    root.optDouble("log_loss")
                 } else {
                     null
                 },
+
             brierScore =
                 if (
                     root.has("brier_score")

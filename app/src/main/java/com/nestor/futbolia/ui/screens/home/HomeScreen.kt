@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.nestor.futbolia.ui.screens.home
 
 import androidx.compose.foundation.background
@@ -67,7 +69,6 @@ fun HomeScreen(
         error = null
 
         try {
-
             matches = repository.loadHome(
                 limit = 10
             )
@@ -134,6 +135,7 @@ fun HomeScreen(
 
             verticalArrangement =
                 Arrangement.spacedBy(12.dp)
+
         ) {
 
             item {
@@ -161,12 +163,14 @@ fun HomeScreen(
                                     .colorScheme
                                     .primaryContainer
                         )
+
                 ) {
 
                     Column(
 
                         modifier =
                             Modifier.padding(18.dp)
+
                     ) {
 
                         Text(
@@ -211,9 +215,11 @@ fun HomeScreen(
                             color =
                                 MaterialTheme
                                     .colorScheme
-                                    .surface.copy(
+                                    .surface
+                                    .copy(
                                         alpha = 0.75f
                                     )
+
                         ) {
 
                             Row(
@@ -231,6 +237,7 @@ fun HomeScreen(
 
                                 verticalAlignment =
                                     Alignment.CenterVertically
+
                             ) {
 
                                 Text(
@@ -276,6 +283,7 @@ fun HomeScreen(
 
                     horizontalArrangement =
                         Arrangement.SpaceBetween
+
                 ) {
 
                     Column {
@@ -336,6 +344,7 @@ fun HomeScreen(
 
                             contentAlignment =
                                 Alignment.Center
+
                         ) {
 
                             Column(
@@ -345,6 +354,7 @@ fun HomeScreen(
 
                                 verticalArrangement =
                                     Arrangement.spacedBy(12.dp)
+
                             ) {
 
                                 CircularProgressIndicator()
@@ -380,6 +390,7 @@ fun HomeScreen(
 
                             shape =
                                 RoundedCornerShape(18.dp)
+
                         ) {
 
                             Column(
@@ -389,10 +400,12 @@ fun HomeScreen(
 
                                 verticalArrangement =
                                     Arrangement.spacedBy(12.dp)
+
                             ) {
 
                                 Text(
-                                    text = "No se pudieron cargar los partidos",
+                                    text =
+                                        "No se pudieron cargar los partidos",
                                     style =
                                         MaterialTheme
                                             .typography
@@ -448,6 +461,7 @@ fun HomeScreen(
 
                             shape =
                                 RoundedCornerShape(18.dp)
+
                         ) {
 
                             Column(
@@ -460,6 +474,7 @@ fun HomeScreen(
 
                                 verticalArrangement =
                                     Arrangement.spacedBy(8.dp)
+
                             ) {
 
                                 Text(

@@ -11,6 +11,11 @@ class FutbolRepository(
         val predictions =
             api.getUpcomingPredictions(limit)
 
+        /*
+         * Una sola consulta de fixtures permite
+         * enriquecer varios partidos sin hacer
+         * una llamada individual por cada tarjeta.
+         */
         val fixtures =
             api.getFixtures(
                 next = maxOf(
@@ -31,6 +36,7 @@ class FutbolRepository(
                     fixtureMap[
                         prediction.matchId
                     ],
+
                 prediction =
                     prediction
             )
@@ -53,11 +59,9 @@ class FutbolRepository(
         )
     }
 
-    suspend fun loadAiStatus(): AiStatus {
-        return api.getAiStatus()
-    }
+    suspend fun loadAiStatus(): AiStatus =
+        api.getAiStatus()
 
-    suspend fun loadPerformance(): AiPerformance {
-        return api.getPerformance()
-    }
+    suspend fun loadPerformance(): AiPerformance =
+        api.getPerformance()
 }

@@ -1,8 +1,29 @@
 package com.nestor.futbolia.ui.screens.analysis
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nestor.futbolia.data.FutbolRepository
@@ -10,7 +31,8 @@ import com.nestor.futbolia.data.MatchUi
 import com.nestor.futbolia.ui.components.PredictionCard
 import kotlinx.coroutines.launch
 
-enum class AnalysisTab {
+private enum class AnalysisTab {
+
     RESUMEN,
     ESTADISTICAS,
     IA,
@@ -36,7 +58,7 @@ fun MatchAnalysisScreen(
         mutableStateOf<String?>(null)
     }
 
-    var tab by remember {
+    var selectedTab by remember {
         mutableStateOf(
             AnalysisTab.RESUMEN
         )
@@ -45,7 +67,7 @@ fun MatchAnalysisScreen(
     val scope =
         rememberCoroutineScope()
 
-    LaunchedEffect(matchId) {
+    suspend fun load() {
 
         loading = true
         error = null
@@ -57,11 +79,11 @@ fun MatchAnalysisScreen(
                     matchId
                 )
 
-        } catch (exception: Exception) {
+        } catch (e: Exception) {
 
             error =
-                exception.message
-                    ?: "No se pudo cargar el partido"
+                e.message
+                    ?: "Error al cargar el partido"
 
         } finally {
 
@@ -69,174 +91,194 @@ fun MatchAnalysisScreen(
         }
     }
 
+    LaunchedEffect(matchId) {
+        load()
+    }
+
     Scaffold(
+
         topBar = {
 
             TopAppBar(
+
                 title = {
                     Text(
                         "ANÁLISIS DEL PARTIDO"
                     )
                 },
+
                 navigationIcon = {
 
-                    TextButton(
+                    Button(
                         onClick = onBack
                     ) {
+
                         Text("‹")
                     }
                 }
             )
         }
+
     ) { padding ->
 
-        if (loading) {
+        when {
 
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-            ) {
-                CircularProgressIndicator()
+            loading -> {
+
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+
+                    verticalArrangement =
+                        Arrangement.Center
+                ) {
+
+                    CircularProgressIndicator(
+                        modifier =
+                            Modifier.padding(
+                                24.dp
+                            )
+                    )
+                }
             }
 
-            return@Scaffold
-        }
+            error != null -> {
 
-        if (error != null) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(16.dp),
 
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp)
-            ) {
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            12.dp
+                        )
+                ) {
 
-                Text(
-                    error!!,
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .error
-                )
+                    Text(
+                        error!!,
 
-                Button(
-                    onClick = {
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .error
+                    )
 
-                        scope.launch {
-
-                            try {
-
-                                loading = true
-
-                                match =
-                                    repository
-                                        .loadMatch(
-                                            matchId
-                                        )
-
-                                error = null
-
-                            } catch (
-                                exception: Exception
-                            ) {
-
-                                error =
-                                    exception.message
-                            } finally {
-
-                                loading = false
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                load()
                             }
                         }
-                    }
-                ) {
-                    Text("REINTENTAR")
-                }
-            }
+                    ) {
 
-            return@Scaffold
-        }
-
-        val current =
-            match ?: return@Scaffold
-
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-        ) {
-
-            MatchHeader(
-                match = current
-            )
-
-            TabRow(
-                selectedTabIndex =
-                    tab.ordinal
-            ) {
-
-                AnalysisTab.entries.forEach { item ->
-
-                    Tab(
-                        selected =
-                            tab == item,
-                        onClick = {
-                            tab = item
-                        },
-                        text = {
-                            Text(
-                                when (item) {
-                                    AnalysisTab.RESUMEN ->
-                                        "RESUMEN"
-
-                                    AnalysisTab.ESTADISTICAS ->
-                                        "ESTADÍSTICAS"
-
-                                    AnalysisTab.IA ->
-                                        "IA"
-
-                                    AnalysisTab.HISTORIAL ->
-                                        "HISTORIAL"
-                                }
-                            )
-                        }
-                    )
-                }
-            }
-
-            when (tab) {
-
-                AnalysisTab.RESUMEN -> {
-
-                    SummaryTab(
-                        match = current
-                    )
-                }
-
-                AnalysisTab.ESTADISTICAS -> {
-
-                    StatisticsTab(
-                        match = current
-                    )
-                }
-
-                AnalysisTab.IA -> {
-
-                    current.prediction?.let {
-                        PredictionCard(
-                            prediction = it
+                        Text(
+                            "REINTENTAR"
                         )
                     }
                 }
+            }
 
-                AnalysisTab.HISTORIAL -> {
+            else -> {
 
-                    HistoryTab(
-                        match = current
-                    )
+                val current =
+                    match
+
+                if (current != null) {
+
+                    Column(
+
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                    ) {
+
+                        MatchHeader(
+                            match = current
+                        )
+
+                        TabRow(
+
+                            selectedTabIndex =
+                                selectedTab.ordinal
+                        ) {
+
+                            AnalysisTab.values()
+                                .forEach { tab ->
+
+                                    Tab(
+
+                                        selected =
+                                            selectedTab ==
+                                                tab,
+
+                                        onClick = {
+                                            selectedTab =
+                                                tab
+                                        },
+
+                                        text = {
+
+                                            Text(
+                                                when (tab) {
+
+                                                    AnalysisTab.RESUMEN ->
+                                                        "RESUMEN"
+
+                                                    AnalysisTab.ESTADISTICAS ->
+                                                        "ESTADÍSTICAS"
+
+                                                    AnalysisTab.IA ->
+                                                        "IA"
+
+                                                    AnalysisTab.HISTORIAL ->
+                                                        "HISTORIAL"
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                        }
+
+                        when (selectedTab) {
+
+                            AnalysisTab.RESUMEN -> {
+
+                                SummaryTab(
+                                    match = current
+                                )
+                            }
+
+                            AnalysisTab.ESTADISTICAS -> {
+
+                                StatisticsTab(
+                                    match = current
+                                )
+                            }
+
+                            AnalysisTab.IA -> {
+
+                                current.prediction?.let {
+
+                                    PredictionCard(
+                                        prediction = it
+                                    )
+                                }
+                            }
+
+                            AnalysisTab.HISTORIAL -> {
+
+                                HistoryTab(
+                                    match = current
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -261,28 +303,30 @@ private fun MatchHeader(
         Text(
             fixture?.leagueName
                 ?: "FÚTBOL",
-            style =
+
+            color =
                 MaterialTheme
-                    .typography
-                    .labelMedium
+                    .colorScheme
+                    .primary
         )
 
         Spacer(
-            Modifier.height(12.dp)
+            modifier =
+                Modifier.height(14.dp)
         )
 
         Row(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier.fillMaxWidth(),
+
+            horizontalArrangement =
+                Arrangement.SpaceBetween
         ) {
 
             Text(
-                fixture
-                    ?.homeTeam
-                    ?.name
+                fixture?.homeTeam?.name
                     ?: "Local",
-                modifier =
-                    Modifier.weight(1f),
+
                 style =
                     MaterialTheme
                         .typography
@@ -291,6 +335,7 @@ private fun MatchHeader(
 
             Text(
                 "VS",
+
                 style =
                     MaterialTheme
                         .typography
@@ -298,18 +343,37 @@ private fun MatchHeader(
             )
 
             Text(
-                fixture
-                    ?.awayTeam
-                    ?.name
+                fixture?.awayTeam?.name
                     ?: "Visitante",
-                modifier =
-                    Modifier.weight(1f),
+
                 style =
                     MaterialTheme
                         .typography
                         .titleMedium
             )
         }
+
+        Spacer(
+            modifier =
+                Modifier.height(10.dp)
+        )
+
+        Text(
+            "Estado: " +
+                (fixture?.status ?: "N/D"),
+
+            style =
+                MaterialTheme
+                    .typography
+                    .labelMedium
+        )
+
+        HorizontalDivider(
+            modifier =
+                Modifier.padding(
+                    top = 14.dp
+                )
+        )
     }
 }
 
@@ -325,6 +389,7 @@ private fun SummaryTab(
 
         Text(
             "RESUMEN",
+
             style =
                 MaterialTheme
                     .typography
@@ -332,7 +397,8 @@ private fun SummaryTab(
         )
 
         Spacer(
-            Modifier.height(16.dp)
+            modifier =
+                Modifier.height(12.dp)
         )
 
         match.prediction?.let {
@@ -351,40 +417,40 @@ private fun StatisticsTab(
 
     Column(
         modifier =
-            Modifier.padding(16.dp)
+            Modifier.padding(16.dp),
+
+        verticalArrangement =
+            Arrangement.spacedBy(
+                10.dp
+            )
     ) {
 
         Text(
             "ESTADÍSTICAS",
+
             style =
                 MaterialTheme
                     .typography
                     .headlineSmall
         )
 
-        Spacer(
-            Modifier.height(16.dp)
+        Text(
+            "ID del partido: " +
+                (match.fixture?.id ?: "N/D")
         )
 
         Text(
-            "Partido: ${match.fixture?.id ?: "N/D"}"
+            "Estado: " +
+                (match.fixture?.status ?: "N/D")
         )
 
         Spacer(
-            Modifier.height(8.dp)
+            modifier =
+                Modifier.height(8.dp)
         )
 
         Text(
-            "Estado: ${match.fixture?.status ?: "N/D"}"
-        )
-
-        Spacer(
-            Modifier.height(8.dp)
-        )
-
-        Text(
-            "Las estadísticas detalladas se mostrarán "
-                    + "cuando estén expuestas por el backend."
+            "Las estadísticas detalladas de tiros, posesión, córners y tarjetas solo se mostrarán cuando estén expuestas por el backend."
         )
     }
 }
@@ -396,19 +462,21 @@ private fun HistoryTab(
 
     Column(
         modifier =
-            Modifier.padding(16.dp)
+            Modifier.padding(16.dp),
+
+        verticalArrangement =
+            Arrangement.spacedBy(
+                10.dp
+            )
     ) {
 
         Text(
             "HISTORIAL",
+
             style =
                 MaterialTheme
                     .typography
                     .headlineSmall
-        )
-
-        Spacer(
-            Modifier.height(16.dp)
         )
 
         Text(
@@ -416,18 +484,12 @@ private fun HistoryTab(
         )
 
         Text(
-            match.prediction
-                ?.modelVersion
+            match.prediction?.modelVersion
                 ?: "N/D"
         )
 
-        Spacer(
-            Modifier.height(12.dp)
-        )
-
         Text(
-            "La evaluación histórica del modelo "
-                    + "se consulta desde HISTORIAL IA."
+            "La evaluación histórica global se encuentra en HISTORIAL IA."
         )
     }
 }

@@ -1,15 +1,25 @@
 package com.nestor.futbolia.ui.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nestor.futbolia.data.MatchUi
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 @Composable
 fun MatchCard(
@@ -24,19 +34,22 @@ fun MatchCard(
         match.prediction
 
     Card(
+
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(
                     horizontal = 12.dp,
-                    vertical = 6.dp
+                    vertical = 5.dp
                 )
                 .clickable {
                     onClick()
                 },
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 2.dp
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme.colorScheme.surface
             )
     ) {
 
@@ -48,6 +61,7 @@ fun MatchCard(
             Row(
                 modifier =
                     Modifier.fillMaxWidth(),
+
                 horizontalArrangement =
                     Arrangement.SpaceBetween
             ) {
@@ -56,24 +70,28 @@ fun MatchCard(
                     text =
                         fixture?.leagueName
                             ?: "FÚTBOL",
+
                     style =
-                        MaterialTheme
-                            .typography
-                            .labelMedium
+                        MaterialTheme.typography.labelMedium,
+
+                    color =
+                        MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                StatusLabel(
+                StatusChip(
                     fixture?.status
                 )
             }
 
             Spacer(
-                Modifier.height(12.dp)
+                modifier =
+                    Modifier.height(14.dp)
             )
 
             Row(
                 modifier =
                     Modifier.fillMaxWidth(),
+
                 verticalAlignment =
                     Alignment.CenterVertically
             ) {
@@ -81,20 +99,18 @@ fun MatchCard(
                 Column(
                     modifier =
                         Modifier.weight(1f),
+
                     horizontalAlignment =
                         Alignment.CenterHorizontally
                 ) {
 
                     Text(
                         text =
-                            fixture
-                                ?.homeTeam
-                                ?.name
+                            fixture?.homeTeam?.name
                                 ?: "Local",
+
                         style =
-                            MaterialTheme
-                                .typography
-                                .bodyLarge
+                            MaterialTheme.typography.bodyLarge
                     )
                 }
 
@@ -105,67 +121,65 @@ fun MatchCard(
 
                     Text(
                         text =
-                            fixtureTime(
+                            formatTime(
                                 fixture?.startingAt
                             ),
+
                         style =
-                            MaterialTheme
-                                .typography
-                                .labelSmall
+                            MaterialTheme.typography.labelSmall
                     )
 
                     Text(
                         text = "VS",
+
                         style =
-                            MaterialTheme
-                                .typography
-                                .titleMedium
+                            MaterialTheme.typography.titleMedium,
+
+                        color =
+                            MaterialTheme.colorScheme.primary
                     )
                 }
 
                 Column(
                     modifier =
                         Modifier.weight(1f),
+
                     horizontalAlignment =
                         Alignment.CenterHorizontally
                 ) {
 
                     Text(
                         text =
-                            fixture
-                                ?.awayTeam
-                                ?.name
+                            fixture?.awayTeam?.name
                                 ?: "Visitante",
+
                         style =
-                            MaterialTheme
-                                .typography
-                                .bodyLarge
+                            MaterialTheme.typography.bodyLarge
                     )
                 }
             }
 
-            Spacer(
-                Modifier.height(12.dp)
-            )
-
             if (prediction != null) {
 
-                HorizontalDivider()
-
                 Spacer(
-                    Modifier.height(8.dp)
+                    modifier =
+                        Modifier.height(12.dp)
                 )
 
                 Text(
                     text =
-                        "🤖 NESTOR: " +
+                        "🤖 NESTOR  " +
                             prediction.prediction +
                             " · " +
-                            "${prediction.predictionPercentage}%",
+                            formatTimePercentage(
+                                prediction.predictionPercentage
+                            ),
+
                     style =
-                        MaterialTheme
-                            .typography
-                            .labelLarge
+                        MaterialTheme.typography.labelMedium,
+
+                    color =
+                        MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -173,7 +187,7 @@ fun MatchCard(
 }
 
 @Composable
-private fun StatusLabel(
+private fun StatusChip(
     status: String?
 ) {
 
@@ -182,30 +196,40 @@ private fun StatusLabel(
             ?.uppercase()
             ?: "NS"
 
-    val text =
+    val label =
         when (normalized) {
-            "NS" -> "PRÓXIMO"
+
+            "NS" ->
+                "PRÓXIMO"
+
             "1H",
             "2H",
             "LIVE",
             "ET",
             "HT",
-            "P" -> "EN VIVO"
+            "P" ->
+                "EN VIVO"
+
             "FT",
             "AET",
-            "PEN" -> "FINALIZADO"
-            else -> normalized
+            "PEN" ->
+                "FINALIZADO"
+
+            else ->
+                normalized
         }
 
     AssistChip(
+
         onClick = {},
+
         label = {
-            Text(text)
+            Text(label)
         }
     )
 }
 
-private fun fixtureTime(
+private fun formatTime(
     value: String?
 ): String {
 
@@ -230,13 +254,23 @@ private fun fixtureTime(
         val date =
             parser.parse(value)
 
-        if (date != null) {
-            formatter.format(date)
-        } else {
-            "--:--"
-        }
+        formatter.format(
+            date ?: return "--:--"
+        )
 
     } catch (_: Exception) {
+
         "--:--"
     }
+}
+
+private fun formatTimePercentage(
+    value: Double
+): String {
+
+    return String.format(
+        Locale.US,
+        "%.1f%%",
+        value
+    )
 }

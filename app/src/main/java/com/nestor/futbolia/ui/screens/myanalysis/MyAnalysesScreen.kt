@@ -1,87 +1,91 @@
 package com.nestor.futbolia.ui.screens.myanalysis
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.nestor.futbolia.data.FutbolRepository
 import com.nestor.futbolia.ui.MainDestination
 import com.nestor.futbolia.ui.components.BottomNavigationBar
 
 @Composable
 fun MyAnalysesScreen(
-    repository: FutbolRepository,
-    onOpenMatch: (Int) -> Unit,
-    onDestinationChanged: (MainDestination) -> Unit
+    onDestinationChanged:
+        (MainDestination) -> Unit
 ) {
 
     Scaffold(
+
         topBar = {
 
-            TopAppBar(
+            TopAppBar {
+
                 title = {
                     Text(
                         "MIS ANÁLISIS"
                     )
                 }
-            )
+            }
         },
+
         bottomBar = {
 
             BottomNavigationBar(
+
                 selected =
                     MainDestination.MIS_ANALISIS,
+
                 onSelected =
                     onDestinationChanged
             )
         }
+
     ) { padding ->
 
         Column(
+
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp)
+                    .padding(16.dp),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    12.dp
+                )
         ) {
 
             Text(
-                "Mis análisis",
+                "MIS ANÁLISIS",
+
                 style =
                     MaterialTheme
                         .typography
                         .headlineSmall
             )
 
-            Spacer(
-                Modifier.height(12.dp)
-            )
-
             Text(
-                "Aquí aparecerán los partidos que "
-                        + "hayas abierto y analizado con NESTOR."
-            )
-
-            Spacer(
-                Modifier.height(24.dp)
+                "Aquí aparecerán los partidos que hayas abierto y analizado con NESTOR."
             )
 
             Text(
                 "MI COMBINACIÓN",
+
                 style =
                     MaterialTheme
                         .typography
                         .titleMedium
             )
 
-            Spacer(
-                Modifier.height(8.dp)
-            )
-
             Text(
-                "La combinación se construirá "
-                        + "a partir de tus selecciones de partidos."
+                "Tus selecciones de partidos aparecerán aquí cuando activemos la persistencia local."
             )
         }
     }

@@ -8,7 +8,10 @@ android {
 
     namespace = "com.nestor.futbolia"
 
-    compileSdk = 36
+    /*
+     * AGP 8.6.1 tiene soporte máximo para API 35.
+     */
+    compileSdk = 35
 
     defaultConfig {
 
@@ -16,7 +19,7 @@ android {
 
         minSdk = 24
 
-        targetSdk = 36
+        targetSdk = 35
 
         versionCode = 1
 
@@ -45,18 +48,22 @@ android {
         }
     }
 
+    /*
+     * AGP 8.6 requiere JDK 17 para el entorno de compilación.
+     * También dejamos el código Java/Kotlin en JVM 17.
+     */
     compileOptions {
 
         sourceCompatibility =
-            JavaVersion.VERSION_11
+            JavaVersion.VERSION_17
 
         targetCompatibility =
-            JavaVersion.VERSION_11
+            JavaVersion.VERSION_17
     }
 
     kotlinOptions {
 
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     buildFeatures {
@@ -68,7 +75,8 @@ android {
 
         resources {
 
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes +=
+                "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
 }
@@ -76,12 +84,18 @@ android {
 dependencies {
 
     /*
-     * ==========================
+     * ==============================
      * JETPACK COMPOSE
-     * ==========================
+     * ==============================
      */
 
     implementation(
+        platform(
+            "androidx.compose:compose-bom:2026.06.01"
+        )
+    )
+
+    androidTestImplementation(
         platform(
             "androidx.compose:compose-bom:2026.06.01"
         )
@@ -109,9 +123,9 @@ dependencies {
 
 
     /*
-     * ==========================
+     * ==============================
      * ACTIVITY
-     * ==========================
+     * ==============================
      */
 
     implementation(
@@ -120,9 +134,9 @@ dependencies {
 
 
     /*
-     * ==========================
+     * ==============================
      * LIFECYCLE
-     * ==========================
+     * ==============================
      */
 
     implementation(
@@ -135,9 +149,9 @@ dependencies {
 
 
     /*
-     * ==========================
+     * ==============================
      * COROUTINES
-     * ==========================
+     * ==============================
      */
 
     implementation(
@@ -146,24 +160,10 @@ dependencies {
 
 
     /*
-     * ==========================
-     * TEST
-     * ==========================
+     * ==============================
+     * HERRAMIENTAS DE DESARROLLO
+     * ==============================
      */
-
-    testImplementation(
-        "junit:junit:4.13.2"
-    )
-
-    androidTestImplementation(
-        platform(
-            "androidx.compose:compose-bom:2026.06.01"
-        )
-    )
-
-    androidTestImplementation(
-        "androidx.compose.ui:ui-test-junit4"
-    )
 
     debugImplementation(
         "androidx.compose.ui:ui-tooling"
@@ -171,5 +171,20 @@ dependencies {
 
     debugImplementation(
         "androidx.compose.ui:ui-test-manifest"
+    )
+
+
+    /*
+     * ==============================
+     * PRUEBAS
+     * ==============================
+     */
+
+    testImplementation(
+        "junit:junit:4.13.2"
+    )
+
+    androidTestImplementation(
+        "androidx.compose.ui:ui-test-junit4"
     )
 }

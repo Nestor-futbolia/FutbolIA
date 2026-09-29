@@ -14,13 +14,15 @@ data class PredictionPercentages(
 
 data class PredictionDetail(
     val matchId: Int,
-    val startingAt: String?,
-    val prediction: String,
-    val predictionProbability: Double,
-    val predictionPercentage: Double,
-    val probabilities: PredictionProbabilities,
-    val percentages: PredictionPercentages,
-    val modelVersion: String
+    val startingAt: String? = null,
+    val prediction: String = "N/D",
+    val predictionProbability: Double = 0.0,
+    val predictionPercentage: Double = 0.0,
+    val probabilities: PredictionProbabilities =
+        PredictionProbabilities(),
+    val percentages: PredictionPercentages =
+        PredictionPercentages(),
+    val modelVersion: String = "N/D"
 )
 
 data class TeamInfo(
@@ -32,8 +34,8 @@ data class TeamInfo(
 
 data class FixtureInfo(
     val id: Int,
-    val startingAt: String?,
-    val status: String?,
+    val startingAt: String? = null,
+    val status: String? = null,
     val homeTeam: TeamInfo,
     val awayTeam: TeamInfo,
     val homeGoals: Int? = null,
@@ -43,10 +45,8 @@ data class FixtureInfo(
 )
 
 data class MatchUi(
-    val fixture: FixtureInfo?,
-    val prediction: PredictionDetail?,
-    val loading: Boolean = false,
-    val error: String? = null
+    val fixture: FixtureInfo? = null,
+    val prediction: PredictionDetail? = null
 )
 
 data class AiStatus(
@@ -66,14 +66,4 @@ data class AiPerformance(
     val accuracyPercent: Double? = null,
     val logLoss: Double? = null,
     val brierScore: Double? = null
-)
-
-data class AppUiState(
-    val loading: Boolean = false,
-    val refreshing: Boolean = false,
-    val matches: List<MatchUi> = emptyList(),
-    val selectedMatch: MatchUi? = null,
-    val aiStatus: AiStatus? = null,
-    val aiPerformance: AiPerformance? = null,
-    val error: String? = null
 )

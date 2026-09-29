@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.nestor.futbolia.ui.screens.analysis
 
 import androidx.compose.foundation.layout.Arrangement
@@ -102,6 +104,7 @@ fun MatchAnalysisScreen(
             TopAppBar(
 
                 title = {
+
                     Text(
                         "ANÁLISIS DEL PARTIDO"
                     )
@@ -126,6 +129,7 @@ fun MatchAnalysisScreen(
             loading -> {
 
                 Column(
+
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -133,9 +137,11 @@ fun MatchAnalysisScreen(
 
                     verticalArrangement =
                         Arrangement.Center
+
                 ) {
 
                     CircularProgressIndicator(
+
                         modifier =
                             Modifier.padding(
                                 24.dp
@@ -147,6 +153,7 @@ fun MatchAnalysisScreen(
             error != null -> {
 
                 Column(
+
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -157,9 +164,11 @@ fun MatchAnalysisScreen(
                         Arrangement.spacedBy(
                             12.dp
                         )
+
                 ) {
 
                     Text(
+
                         error!!,
 
                         color =
@@ -169,11 +178,14 @@ fun MatchAnalysisScreen(
                     )
 
                     Button(
+
                         onClick = {
+
                             scope.launch {
                                 load()
                             }
                         }
+
                     ) {
 
                         Text(
@@ -196,6 +208,7 @@ fun MatchAnalysisScreen(
                             Modifier
                                 .fillMaxSize()
                                 .padding(padding)
+
                     ) {
 
                         MatchHeader(
@@ -206,6 +219,7 @@ fun MatchAnalysisScreen(
 
                             selectedTabIndex =
                                 selectedTab.ordinal
+
                         ) {
 
                             AnalysisTab.values()
@@ -218,6 +232,7 @@ fun MatchAnalysisScreen(
                                                 tab,
 
                                         onClick = {
+
                                             selectedTab =
                                                 tab
                                         },
@@ -225,6 +240,7 @@ fun MatchAnalysisScreen(
                                         text = {
 
                                             Text(
+
                                                 when (tab) {
 
                                                     AnalysisTab.RESUMEN ->
@@ -294,13 +310,16 @@ private fun MatchHeader(
         match.fixture
 
     Column(
+
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
+
     ) {
 
         Text(
+
             fixture?.leagueName
                 ?: "FÚTBOL",
 
@@ -316,14 +335,17 @@ private fun MatchHeader(
         )
 
         Row(
+
             modifier =
                 Modifier.fillMaxWidth(),
 
             horizontalArrangement =
                 Arrangement.SpaceBetween
+
         ) {
 
             Text(
+
                 fixture?.homeTeam?.name
                     ?: "Local",
 
@@ -334,6 +356,7 @@ private fun MatchHeader(
             )
 
             Text(
+
                 "VS",
 
                 style =
@@ -343,6 +366,7 @@ private fun MatchHeader(
             )
 
             Text(
+
                 fixture?.awayTeam?.name
                     ?: "Visitante",
 
@@ -359,6 +383,7 @@ private fun MatchHeader(
         )
 
         Text(
+
             "Estado: " +
                 (fixture?.status ?: "N/D"),
 
@@ -369,6 +394,7 @@ private fun MatchHeader(
         )
 
         HorizontalDivider(
+
             modifier =
                 Modifier.padding(
                     top = 14.dp
@@ -383,11 +409,14 @@ private fun SummaryTab(
 ) {
 
     Column(
+
         modifier =
             Modifier.padding(16.dp)
+
     ) {
 
         Text(
+
             "RESUMEN",
 
             style =
@@ -397,6 +426,7 @@ private fun SummaryTab(
         )
 
         Spacer(
+
             modifier =
                 Modifier.height(12.dp)
         )
@@ -416,6 +446,7 @@ private fun StatisticsTab(
 ) {
 
     Column(
+
         modifier =
             Modifier.padding(16.dp),
 
@@ -423,9 +454,11 @@ private fun StatisticsTab(
             Arrangement.spacedBy(
                 10.dp
             )
+
     ) {
 
         Text(
+
             "ESTADÍSTICAS",
 
             style =
@@ -435,21 +468,25 @@ private fun StatisticsTab(
         )
 
         Text(
+
             "ID del partido: " +
                 (match.fixture?.id ?: "N/D")
         )
 
         Text(
+
             "Estado: " +
                 (match.fixture?.status ?: "N/D")
         )
 
         Spacer(
+
             modifier =
                 Modifier.height(8.dp)
         )
 
         Text(
+
             "Las estadísticas detalladas de tiros, posesión, córners y tarjetas solo se mostrarán cuando estén expuestas por el backend."
         )
     }
@@ -461,6 +498,7 @@ private fun HistoryTab(
 ) {
 
     Column(
+
         modifier =
             Modifier.padding(16.dp),
 
@@ -468,9 +506,11 @@ private fun HistoryTab(
             Arrangement.spacedBy(
                 10.dp
             )
+
     ) {
 
         Text(
+
             "HISTORIAL",
 
             style =
@@ -484,11 +524,13 @@ private fun HistoryTab(
         )
 
         Text(
+
             match.prediction?.modelVersion
                 ?: "N/D"
         )
 
         Text(
+
             "La evaluación histórica global se encuentra en HISTORIAL IA."
         )
     }

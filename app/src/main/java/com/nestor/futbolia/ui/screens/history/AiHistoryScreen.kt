@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.nestor.futbolia.ui.screens.history
 
 import androidx.compose.foundation.layout.Arrangement
@@ -86,14 +88,15 @@ fun AiHistoryScreen(
 
         topBar = {
 
-            TopAppBar {
+            TopAppBar(
 
                 title = {
+
                     Text(
                         "📈 HISTORIAL IA"
                     )
                 }
-            }
+            )
         },
 
         bottomBar = {
@@ -115,11 +118,13 @@ fun AiHistoryScreen(
             loading -> {
 
                 Column(
+
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .padding(padding)
                             .padding(16.dp)
+
                 ) {
 
                     CircularProgressIndicator()
@@ -129,6 +134,7 @@ fun AiHistoryScreen(
             error != null -> {
 
                 Column(
+
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -139,9 +145,11 @@ fun AiHistoryScreen(
                         Arrangement.spacedBy(
                             12.dp
                         )
+
                 ) {
 
                     Text(
+
                         error!!,
 
                         color =
@@ -151,11 +159,14 @@ fun AiHistoryScreen(
                     )
 
                     Button(
+
                         onClick = {
+
                             scope.launch {
                                 load()
                             }
                         }
+
                     ) {
 
                         Text(
@@ -179,9 +190,11 @@ fun AiHistoryScreen(
                         Arrangement.spacedBy(
                             8.dp
                         )
+
                 ) {
 
                     Text(
+
                         "NESTOR",
 
                         style =
@@ -191,13 +204,17 @@ fun AiHistoryScreen(
                     )
 
                     InfoCard(
+
                         "MODELO ACTIVO",
+
                         status?.modelVersion
                             ?: "N/D"
                     )
 
                     InfoCard(
+
                         "PARTIDOS EVALUADOS",
+
                         performance
                             ?.evaluatedMatches
                             ?.toString()
@@ -205,7 +222,9 @@ fun AiHistoryScreen(
                     )
 
                     InfoCard(
+
                         "CORRECTOS",
+
                         performance
                             ?.correctMatches
                             ?.toString()
@@ -213,32 +232,41 @@ fun AiHistoryScreen(
                     )
 
                     InfoCard(
+
                         "ACCURACY",
+
                         formatValue(
                             performance?.accuracy
                         )
                     )
 
                     InfoCard(
+
                         "LOG LOSS",
+
                         formatValue(
                             performance?.logLoss
                         )
                     )
 
                     InfoCard(
+
                         "BRIER SCORE",
+
                         formatValue(
                             performance?.brierScore
                         )
                     )
 
                     Button(
+
                         onClick = {
+
                             scope.launch {
                                 load()
                             }
                         }
+
                     ) {
 
                         Text(
@@ -268,11 +296,13 @@ private fun InfoCard(
 
             horizontalArrangement =
                 Arrangement.SpaceBetween
+
         ) {
 
             Text(title)
 
             Text(
+
                 value,
 
                 style =

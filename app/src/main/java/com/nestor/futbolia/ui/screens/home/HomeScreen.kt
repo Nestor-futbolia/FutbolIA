@@ -1,10 +1,26 @@
 package com.nestor.futbolia.ui.screens.home
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nestor.futbolia.data.FutbolRepository
@@ -18,8 +34,8 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     repository: FutbolRepository,
     onOpenMatch: (Int) -> Unit,
-    onOpenPredictions: () -> Unit,
-    onDestinationChanged: (MainDestination) -> Unit
+    onDestinationChanged:
+        (MainDestination) -> Unit
 ) {
 
     var matches by remember {
@@ -51,10 +67,10 @@ fun HomeScreen(
                     limit = 10
                 )
 
-        } catch (exception: Exception) {
+        } catch (e: Exception) {
 
             error =
-                exception.message
+                e.message
                     ?: "No se pudieron cargar los partidos"
 
         } finally {
@@ -68,28 +84,53 @@ fun HomeScreen(
     }
 
     Scaffold(
+
         topBar = {
 
             TopAppBar(
+
                 title = {
-                    Text(
-                        "FÚTBOL NESTOR IA"
-                    )
+
+                    Column {
+
+                        Text(
+                            "FÚTBOL NESTOR IA"
+                        )
+
+                        Text(
+                            "Resultados · IA · Análisis",
+
+                            style =
+                                MaterialTheme
+                                    .typography
+                                    .labelSmall,
+
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
+                        )
+                    }
                 }
             )
         },
+
         bottomBar = {
 
             BottomNavigationBar(
+
                 selected =
                     MainDestination.LIGAS,
+
                 onSelected =
                     onDestinationChanged
             )
         }
+
     ) { padding ->
 
         Column(
+
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -98,30 +139,37 @@ fun HomeScreen(
 
             Text(
                 text =
-                    "Partidos y predicciones",
+                    "PARTIDOS",
+
                 style =
                     MaterialTheme
                         .typography
                         .headlineSmall,
+
                 modifier =
                     Modifier.padding(
-                        16.dp
+                        horizontal = 16.dp,
+                        vertical = 14.dp
                     )
             )
 
-            OutlinedButton(
+            Button(
+
                 onClick = {
                     scope.launch {
                         load()
                     }
                 },
+
                 modifier =
-                    Modifier
-                        .padding(
-                            horizontal = 16.dp
-                        )
+                    Modifier.padding(
+                        horizontal = 16.dp
+                    )
             ) {
-                Text("ACTUALIZAR")
+
+                Text(
+                    "ACTUALIZAR"
+                )
             }
 
             when {
@@ -130,9 +178,12 @@ fun HomeScreen(
 
                     Box(
                         modifier =
-                            Modifier
-                                .fillMaxSize()
+                            Modifier.fillMaxSize(),
+
+                        contentAlignment =
+                            Alignment.Center
                     ) {
+
                         CircularProgressIndicator()
                     }
                 }
@@ -143,20 +194,21 @@ fun HomeScreen(
                         modifier =
                             Modifier.padding(
                                 16.dp
+                            ),
+
+                        verticalArrangement =
+                            Arrangement.spacedBy(
+                                12.dp
                             )
                     ) {
 
                         Text(
-                            text =
-                                error!!,
+                            error!!,
+
                             color =
                                 MaterialTheme
                                     .colorScheme
                                     .error
-                        )
-
-                        Spacer(
-                            Modifier.height(12.dp)
                         )
 
                         Button(
@@ -166,7 +218,10 @@ fun HomeScreen(
                                 }
                             }
                         ) {
-                            Text("REINTENTAR")
+
+                            Text(
+                                "REINTENTAR"
+                            )
                         }
                     }
                 }
@@ -175,7 +230,8 @@ fun HomeScreen(
 
                     Text(
                         text =
-                            "No hay partidos próximos disponibles.",
+                            "No hay predicciones próximas disponibles.",
+
                         modifier =
                             Modifier.padding(
                                 16.dp
@@ -185,20 +241,19 @@ fun HomeScreen(
 
                 else -> {
 
-                    LazyColumn(
-                        modifier =
-                            Modifier.fillMaxSize()
-                    ) {
+                    LazyColumn {
 
                         item {
 
                             Text(
                                 text =
                                     "PRÓXIMOS PARTIDOS",
+
                                 style =
                                     MaterialTheme
                                         .typography
                                         .titleMedium,
+
                                 modifier =
                                     Modifier.padding(
                                         16.dp
@@ -206,21 +261,18 @@ fun HomeScreen(
                             )
                         }
 
-                        items(
-                            matches
-                        ) { match ->
+                        items(matches) { match ->
 
                             MatchCard(
+
                                 match = match,
+
                                 onClick = {
 
                                     val id =
-                                        match
-                                            .prediction
+                                        match.prediction
                                             ?.matchId
-                                            ?: match
-                                                .fixture
-                                                ?.id
+                                            ?: match.fixture?.id
 
                                     if (id != null) {
                                         onOpenMatch(id)

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.nestor.futbolia.ui.screens.myanalysis
 
 import androidx.compose.foundation.layout.Arrangement
@@ -24,14 +26,15 @@ fun MyAnalysesScreen(
 
         topBar = {
 
-            TopAppBar {
+            TopAppBar(
 
                 title = {
+
                     Text(
                         "MIS ANÁLISIS"
                     )
                 }
-            }
+            )
         },
 
         bottomBar = {
@@ -60,9 +63,11 @@ fun MyAnalysesScreen(
                 Arrangement.spacedBy(
                     12.dp
                 )
+
         ) {
 
             Text(
+
                 "MIS ANÁLISIS",
 
                 style =
@@ -72,10 +77,12 @@ fun MyAnalysesScreen(
             )
 
             Text(
+
                 "Aquí aparecerán los partidos que hayas abierto y analizado con NESTOR."
             )
 
             Text(
+
                 "MI COMBINACIÓN",
 
                 style =
@@ -85,6 +92,7 @@ fun MyAnalysesScreen(
             )
 
             Text(
+
                 "Tus selecciones de partidos aparecerán aquí cuando activemos la persistencia local."
             )
         }

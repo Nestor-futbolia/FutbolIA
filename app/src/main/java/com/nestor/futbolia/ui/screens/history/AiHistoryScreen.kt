@@ -1,8 +1,23 @@
 package com.nestor.futbolia.ui.screens.history
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nestor.futbolia.data.AiPerformance
@@ -15,7 +30,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun AiHistoryScreen(
     repository: FutbolRepository,
-    onDestinationChanged: (MainDestination) -> Unit
+    onDestinationChanged:
+        (MainDestination) -> Unit
 ) {
 
     var status by remember {
@@ -30,10 +46,17 @@ fun AiHistoryScreen(
         mutableStateOf(true)
     }
 
+    var error by remember {
+        mutableStateOf<String?>(null)
+    }
+
     val scope =
         rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    suspend fun load() {
+
+        loading = true
+        error = null
 
         try {
 
@@ -43,151 +66,186 @@ fun AiHistoryScreen(
             performance =
                 repository.loadPerformance()
 
+        } catch (e: Exception) {
+
+            error =
+                e.message
+                    ?: "No se pudo cargar el historial"
+
         } finally {
 
             loading = false
         }
     }
 
+    LaunchedEffect(Unit) {
+        load()
+    }
+
     Scaffold(
+
         topBar = {
 
-            TopAppBar(
+            TopAppBar {
+
                 title = {
                     Text(
                         "📈 HISTORIAL IA"
                     )
                 }
-            )
+            }
         },
+
         bottomBar = {
 
             BottomNavigationBar(
+
                 selected =
                     MainDestination.HISTORIAL_IA,
+
                 onSelected =
                     onDestinationChanged
             )
         }
+
     ) { padding ->
 
-        if (loading) {
+        when {
 
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-            ) {
+            loading -> {
 
-                CircularProgressIndicator()
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(16.dp)
+                ) {
+
+                    CircularProgressIndicator()
+                }
             }
 
-            return@Scaffold
-        }
+            error != null -> {
 
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp)
-        ) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(16.dp),
 
-            Text(
-                "NESTOR",
-                style =
-                    MaterialTheme
-                        .typography
-                        .headlineSmall
-            )
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            12.dp
+                        )
+                ) {
 
-            Spacer(
-                Modifier.height(16.dp)
-            )
+                    Text(
+                        error!!,
 
-            InfoCard(
-                title = "MODELO ACTIVO",
-                value =
-                    status
-                        ?.modelVersion
-                        ?: "N/D"
-            )
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .error
+                    )
 
-            InfoCard(
-                title = "PARTIDOS DE ENTRENAMIENTO",
-                value =
-                    status
-                        ?.trainingMatches
-                        ?.toString()
-                        ?: "N/D"
-            )
-
-            InfoCard(
-                title = "PARTIDOS EVALUADOS",
-                value =
-                    performance
-                        ?.evaluatedMatches
-                        ?.toString()
-                        ?: "0"
-            )
-
-            InfoCard(
-                title = "ACCURACY",
-                value =
-                    performance
-                        ?.accuracyPercent
-                        ?.let {
-                            "$it%"
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                load()
+                            }
                         }
-                        ?: "N/D"
-            )
+                    ) {
 
-            InfoCard(
-                title = "LOG LOSS",
-                value =
-                    performance
-                        ?.logLoss
-                        ?.let {
-                            "%.4f".format(it)
-                        }
-                        ?: "N/D"
-            )
-
-            InfoCard(
-                title = "BRIER SCORE",
-                value =
-                    performance
-                        ?.brierScore
-                        ?.let {
-                            "%.4f".format(it)
-                        }
-                        ?: "N/D"
-            )
-
-            Spacer(
-                Modifier.height(16.dp)
-            )
-
-            Button(
-                onClick = {
-
-                    scope.launch {
-
-                        status =
-                            repository
-                                .loadAiStatus()
-
-                        performance =
-                            repository
-                                .loadPerformance()
+                        Text(
+                            "REINTENTAR"
+                        )
                     }
                 }
-            ) {
+            }
 
-                Text(
-                    "ACTUALIZAR HISTORIAL"
-                )
+            else -> {
+
+                Column(
+
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(16.dp),
+
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+
+                    Text(
+                        "NESTOR",
+
+                        style =
+                            MaterialTheme
+                                .typography
+                                .headlineSmall
+                    )
+
+                    InfoCard(
+                        "MODELO ACTIVO",
+                        status?.modelVersion
+                            ?: "N/D"
+                    )
+
+                    InfoCard(
+                        "PARTIDOS EVALUADOS",
+                        performance
+                            ?.evaluatedMatches
+                            ?.toString()
+                            ?: "0"
+                    )
+
+                    InfoCard(
+                        "CORRECTOS",
+                        performance
+                            ?.correctMatches
+                            ?.toString()
+                            ?: "0"
+                    )
+
+                    InfoCard(
+                        "ACCURACY",
+                        formatValue(
+                            performance?.accuracy
+                        )
+                    )
+
+                    InfoCard(
+                        "LOG LOSS",
+                        formatValue(
+                            performance?.logLoss
+                        )
+                    )
+
+                    InfoCard(
+                        "BRIER SCORE",
+                        formatValue(
+                            performance?.brierScore
+                        )
+                    )
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                load()
+                            }
+                        }
+                    ) {
+
+                        Text(
+                            "ACTUALIZAR"
+                        )
+                    }
+                }
             }
         }
     }
@@ -199,34 +257,24 @@ private fun InfoCard(
     value: String
 ) {
 
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    vertical = 4.dp
-                )
-    ) {
+    Card {
 
-        Row(
+        androidx.compose.foundation.layout.Row(
+
             modifier =
                 Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(16.dp),
+
             horizontalArrangement =
                 Arrangement.SpaceBetween
         ) {
 
-            Text(
-                title,
-                style =
-                    MaterialTheme
-                        .typography
-                        .labelLarge
-            )
+            Text(title)
 
             Text(
                 value,
+
                 style =
                     MaterialTheme
                         .typography
@@ -234,4 +282,19 @@ private fun InfoCard(
             )
         }
     }
+}
+
+private fun formatValue(
+    value: Double?
+): String {
+
+    return value?.let {
+
+        String.format(
+            java.util.Locale.US,
+            "%.4f",
+            it
+        )
+
+    } ?: "N/D"
 }

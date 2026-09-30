@@ -18,37 +18,36 @@ class FutbolApi {
         withContext(Dispatchers.IO) {
 
             val url = URL("$BASE_URL$path")
-
             val connection =
                 url.openConnection() as HttpURLConnection
 
             try {
                 connection.requestMethod = "GET"
-                connection.connectTimeout = 20_000
-                connection.readTimeout = 30_000
-
+                connection.connectTimeout = 20000
+                connection.readTimeout = 30000
                 connection.setRequestProperty(
                     "Accept",
                     "application/json"
                 )
 
-                val responseCode = connection.responseCode
+                val code = connection.responseCode
 
                 val stream =
-                    if (responseCode in 200..299) {
+                    if (code in 200..299) {
                         connection.inputStream
                     } else {
                         connection.errorStream
                     }
 
                 val body =
-                    stream?.bufferedReader()?.use {
-                        it.readText()
-                    } ?: ""
+                    stream
+                        ?.bufferedReader()
+                        ?.use { it.readText() }
+                        ?: ""
 
-                if (responseCode !in 200..299) {
+                if (code !in 200..299) {
                     throw Exception(
-                        "Error HTTP $responseCode"
+                        "Servidor respondió HTTP $code: $body"
                     )
                 }
 
@@ -59,17 +58,203 @@ class FutbolApi {
             }
         }
 
+    private fun readProbability(
+        probabilities: JSONObject?,
+        key: String
+    ): Double {
+
+        if (probabilities == null) {
+            return 0.0
+        }
+
+        if (probabilities.has(key)) {
+            return probabilities.optDouble(
+                key,
+                0.0
+            )
+        }
+
+        val lowercaseKey = key.lowercase()
+
+        if (probabilities.has(lowercaseKey)) {
+            return probabilities.optDouble(
+                lowercaseKey,
+                0.0
+            )
+        }
+
+        return 0.0
+    }
+
+    private fun readPercentage(
+        percentages: JSONObject?,
+        probabilities: JSONObject?,
+        key: String
+    ): Double {
+
+        if (percentages != null) {
+
+            if (percentages.has(key)) {
+                return percentages.optDouble(
+                    key,
+                    0.0
+                )
+            }
+
+            val lowercaseKey = key.lowercase()
+
+            if (percentages.has(lowercaseKey)) {
+                return percentages.optDouble(
+                    lowercaseKey,
+                    0.0
+                )
+            }
+        }
+
+        return readProbability(
+            probabilities,
+            key
+        ) * 100.0
+    }
+
+    private fun parsePrediction(
+        root: JSONObject
+    ): PredictionDetail {
+
+        val probabilities =
+            root.optJSONObject(
+                "probabilities"
+            )
+
+        val percentages =
+            root.optJSONObject(
+                "percentages"
+            )
+
+        val probability =
+            if (root.has("probability")) {
+                root.optDouble(
+                    "probability",
+                    0.0
+                )
+            } else {
+                root.optDouble(
+                    "prediction_probability",
+                    0.0
+                )
+            }
+
+        val predictionPercentage =
+            if (root.has("prediction_percentage")) {
+                root.optDouble(
+                    "prediction_percentage",
+                    0.0
+                )
+            } else {
+                probability * 100.0
+            }
+
+        val homeProbability =
+            readProbability(
+                probabilities,
+                "HOME"
+            )
+
+        val drawProbability =
+            readProbability(
+                probabilities,
+                "DRAW"
+            )
+
+        val awayProbability =
+            readProbability(
+                probabilities,
+                "AWAY"
+            )
+
+        return PredictionDetail(
+
+            matchId =
+                root.optInt(
+                    "match_id"
+                ),
+
+            startingAt =
+                if (root.has("starting_at")
+                    && !root.isNull("starting_at")
+                ) {
+                    root.optString(
+                        "starting_at"
+                    )
+                } else {
+                    null
+                },
+
+            prediction =
+                root.optString(
+                    "prediction",
+                    "N/D"
+                ),
+
+            predictionProbability =
+                probability,
+
+            predictionPercentage =
+                predictionPercentage,
+
+            probabilities =
+                PredictionProbabilities(
+                    home = homeProbability,
+                    draw = drawProbability,
+                    away = awayProbability
+                ),
+
+            percentages =
+                PredictionPercentages(
+                    home =
+                        readPercentage(
+                            percentages,
+                            probabilities,
+                            "HOME"
+                        ),
+                    draw =
+                        readPercentage(
+                            percentages,
+                            probabilities,
+                            "DRAW"
+                        ),
+                    away =
+                        readPercentage(
+                            percentages,
+                            probabilities,
+                            "AWAY"
+                        )
+                ),
+
+            modelVersion =
+                root.optString(
+                    "model_version",
+                    "N/D"
+                )
+        )
+    }
+
     suspend fun getUpcomingPredictions(
         limit: Int = 10
     ): List<PredictionDetail> {
 
         val response =
-            get("/ai/predict/upcoming?limit=$limit")
+            get(
+                "/ai/predict/upcoming?limit=$limit"
+            )
 
-        val root = JSONObject(response)
+        val root =
+            JSONObject(response)
 
         val details =
-            root.optJSONArray("details")
+            root.optJSONArray(
+                "details"
+            )
                 ?: JSONArray()
 
         val result =
@@ -81,93 +266,76 @@ class FutbolApi {
                 details.optJSONObject(i)
                     ?: continue
 
-            if (!item.optBoolean("ok", false)) {
+            if (!item.optBoolean(
+                    "ok",
+                    false
+                )
+            ) {
                 continue
             }
 
-            val probabilities =
-                item.optJSONObject("probabilities")
+            val matchId =
+                item.optInt(
+                    "match_id",
+                    0
+                )
 
-            val percentages =
-                item.optJSONObject("percentages")
+            if (matchId <= 0) {
+                continue
+            }
+
+            val status =
+                item.optString(
+                    "status",
+                    ""
+                )
+
+            val hasPrediction =
+                item.has("prediction")
+                    && item.optString(
+                        "prediction",
+                        ""
+                    ).isNotBlank()
+
+            /*
+             * El endpoint batch puede devolver
+             * "skipped" cuando ya existen las
+             * predicciones 1X2.
+             *
+             * En ese caso consultamos la predicción
+             * individual para obtener los datos reales.
+             */
+            if (
+                status.equals(
+                    "skipped",
+                    ignoreCase = true
+                )
+                || !hasPrediction
+            ) {
+
+                try {
+
+                    result.add(
+                        getPrediction(
+                            matchId
+                        )
+                    )
+
+                } catch (_: Exception) {
+
+                    // No agregamos datos falsos.
+                    // Si el partido no puede obtener
+                    // su predicción real, simplemente
+                    // se omite.
+
+                }
+
+                continue
+            }
 
             result.add(
-                PredictionDetail(
-
-                    matchId =
-                        item.optInt("match_id"),
-
-                    startingAt =
-                        item.optString(
-                            "starting_at",
-                            null
-                        ),
-
-                    prediction =
-                        item.optString(
-                            "prediction",
-                            "N/D"
-                        ),
-
-                    predictionProbability =
-                        item.optDouble(
-                            "prediction_probability",
-                            0.0
-                        ),
-
-                    predictionPercentage =
-                        item.optDouble(
-                            "prediction_percentage",
-                            0.0
-                        ),
-
-                    probabilities =
-                        PredictionProbabilities(
-                            home =
-                                probabilities?.optDouble(
-                                    "home",
-                                    0.0
-                                ) ?: 0.0,
-
-                            draw =
-                                probabilities?.optDouble(
-                                    "draw",
-                                    0.0
-                                ) ?: 0.0,
-
-                            away =
-                                probabilities?.optDouble(
-                                    "away",
-                                    0.0
-                                ) ?: 0.0
-                        ),
-
-                    percentages =
-                        PredictionPercentages(
-                            home =
-                                percentages?.optDouble(
-                                    "home",
-                                    0.0
-                                ) ?: 0.0,
-
-                            draw =
-                                percentages?.optDouble(
-                                    "draw",
-                                    0.0
-                                ) ?: 0.0,
-
-                            away =
-                                percentages?.optDouble(
-                                    "away",
-                                    0.0
-                                ) ?: 0.0
-                        ),
-
-                    modelVersion =
-                        item.optString(
-                            "model_version",
-                            "N/D"
-                        )
+                parsePrediction(
+                    item
                 )
             )
         }
@@ -180,93 +348,15 @@ class FutbolApi {
     ): PredictionDetail {
 
         val response =
-            get("/ai/predict/$matchId")
+            get(
+                "/ai/predict/$matchId"
+            )
 
         val root =
             JSONObject(response)
 
-        val probabilities =
-            root.optJSONObject("probabilities")
-
-        val percentages =
-            root.optJSONObject("percentages")
-
-        return PredictionDetail(
-
-            matchId =
-                root.optInt("match_id"),
-
-            startingAt =
-                root.optString(
-                    "starting_at",
-                    null
-                ),
-
-            prediction =
-                root.optString(
-                    "prediction",
-                    "N/D"
-                ),
-
-            predictionProbability =
-                root.optDouble(
-                    "prediction_probability",
-                    0.0
-                ),
-
-            predictionPercentage =
-                root.optDouble(
-                    "prediction_percentage",
-                    0.0
-                ),
-
-            probabilities =
-                PredictionProbabilities(
-                    home =
-                        probabilities?.optDouble(
-                            "home",
-                            0.0
-                        ) ?: 0.0,
-
-                    draw =
-                        probabilities?.optDouble(
-                            "draw",
-                            0.0
-                        ) ?: 0.0,
-
-                    away =
-                        probabilities?.optDouble(
-                            "away",
-                            0.0
-                        ) ?: 0.0
-                ),
-
-            percentages =
-                PredictionPercentages(
-                    home =
-                        percentages?.optDouble(
-                            "home",
-                            0.0
-                        ) ?: 0.0,
-
-                    draw =
-                        percentages?.optDouble(
-                            "draw",
-                            0.0
-                        ) ?: 0.0,
-
-                    away =
-                        percentages?.optDouble(
-                            "away",
-                            0.0
-                        ) ?: 0.0
-                ),
-
-            modelVersion =
-                root.optString(
-                    "model_version",
-                    "N/D"
-                )
+        return parsePrediction(
+            root
         )
     }
 
@@ -275,13 +365,17 @@ class FutbolApi {
     ): List<FixtureInfo> {
 
         val response =
-            get("/fixtures?next=$next")
+            get(
+                "/fixtures?next=$next"
+            )
 
         val root =
             JSONObject(response)
 
         val array =
-            root.optJSONArray("response")
+            root.optJSONArray(
+                "response"
+            )
                 ?: JSONArray()
 
         val result =
@@ -294,32 +388,99 @@ class FutbolApi {
                     ?: continue
 
             val fixture =
-                item.optJSONObject("fixture")
+                item.optJSONObject(
+                    "fixture"
+                )
                     ?: continue
 
             val teams =
-                item.optJSONObject("teams")
+                item.optJSONObject(
+                    "teams"
+                )
                     ?: continue
 
             val home =
-                teams.optJSONObject("home")
+                teams.optJSONObject(
+                    "home"
+                )
                     ?: continue
 
             val away =
-                teams.optJSONObject("away")
+                teams.optJSONObject(
+                    "away"
+                )
                     ?: continue
 
             val league =
-                item.optJSONObject("league")
+                item.optJSONObject(
+                    "league"
+                )
 
             val goals =
-                item.optJSONObject("goals")
+                item.optJSONObject(
+                    "goals"
+                )
+
+            val homeTeam =
+                TeamInfo(
+                    id =
+                        home.optInt(
+                            "id"
+                        ),
+
+                    name =
+                        home.optString(
+                            "name",
+                            "Local"
+                        ),
+
+                    code =
+                        home.optString(
+                            "code",
+                            null
+                        ),
+
+                    logo =
+                        home.optString(
+                            "logo",
+                            null
+                        )
+                )
+
+            val awayTeam =
+                TeamInfo(
+                    id =
+                        away.optInt(
+                            "id"
+                        ),
+
+                    name =
+                        away.optString(
+                            "name",
+                            "Visitante"
+                        ),
+
+                    code =
+                        away.optString(
+                            "code",
+                            null
+                        ),
+
+                    logo =
+                        away.optString(
+                            "logo",
+                            null
+                        )
+                )
 
             result.add(
+
                 FixtureInfo(
 
                     id =
-                        fixture.optInt("id"),
+                        fixture.optInt(
+                            "id"
+                        ),
 
                     startingAt =
                         fixture.optString(
@@ -329,76 +490,44 @@ class FutbolApi {
 
                     status =
                         fixture
-                            .optJSONObject("status")
+                            .optJSONObject(
+                                "status"
+                            )
                             ?.optString(
                                 "short",
                                 null
                             ),
 
                     homeTeam =
-                        TeamInfo(
-                            id =
-                                home.optInt("id"),
-
-                            name =
-                                home.optString(
-                                    "name",
-                                    "Local"
-                                ),
-
-                            code =
-                                home.optString(
-                                    "code",
-                                    null
-                                ),
-
-                            logo =
-                                home.optString(
-                                    "logo",
-                                    null
-                                )
-                        ),
+                        homeTeam,
 
                     awayTeam =
-                        TeamInfo(
-                            id =
-                                away.optInt("id"),
-
-                            name =
-                                away.optString(
-                                    "name",
-                                    "Visitante"
-                                ),
-
-                            code =
-                                away.optString(
-                                    "code",
-                                    null
-                                ),
-
-                            logo =
-                                away.optString(
-                                    "logo",
-                                    null
-                                )
-                        ),
+                        awayTeam,
 
                     homeGoals =
                         if (
-                            goals?.isNull("home") == true
+                            goals?.isNull(
+                                "home"
+                            ) == true
                         ) {
                             null
                         } else {
-                            goals?.optInt("home")
+                            goals?.optInt(
+                                "home"
+                            )
                         },
 
                     awayGoals =
                         if (
-                            goals?.isNull("away") == true
+                            goals?.isNull(
+                                "away"
+                            ) == true
                         ) {
                             null
                         } else {
-                            goals?.optInt("away")
+                            goals?.optInt(
+                                "away"
+                            )
                         },
 
                     leagueName =
@@ -424,13 +553,17 @@ class FutbolApi {
     ): FixtureInfo? {
 
         val response =
-            get("/fixtures/$matchId")
+            get(
+                "/fixtures/$matchId"
+            )
 
         val root =
             JSONObject(response)
 
         val array =
-            root.optJSONArray("response")
+            root.optJSONArray(
+                "response"
+            )
                 ?: return null
 
         if (array.length() == 0) {
@@ -438,35 +571,51 @@ class FutbolApi {
         }
 
         val item =
-            array.optJSONObject(0)
+            array.optJSONObject(
+                0
+            )
                 ?: return null
 
         val fixture =
-            item.optJSONObject("fixture")
+            item.optJSONObject(
+                "fixture"
+            )
                 ?: return null
 
         val teams =
-            item.optJSONObject("teams")
+            item.optJSONObject(
+                "teams"
+            )
                 ?: return null
 
         val home =
-            teams.optJSONObject("home")
+            teams.optJSONObject(
+                "home"
+            )
                 ?: return null
 
         val away =
-            teams.optJSONObject("away")
+            teams.optJSONObject(
+                "away"
+            )
                 ?: return null
 
         val league =
-            item.optJSONObject("league")
+            item.optJSONObject(
+                "league"
+            )
 
         val goals =
-            item.optJSONObject("goals")
+            item.optJSONObject(
+                "goals"
+            )
 
         return FixtureInfo(
 
             id =
-                fixture.optInt("id"),
+                fixture.optInt(
+                    "id"
+                ),
 
             startingAt =
                 fixture.optString(
@@ -476,7 +625,9 @@ class FutbolApi {
 
             status =
                 fixture
-                    .optJSONObject("status")
+                    .optJSONObject(
+                        "status"
+                    )
                     ?.optString(
                         "short",
                         null
@@ -485,7 +636,9 @@ class FutbolApi {
             homeTeam =
                 TeamInfo(
                     id =
-                        home.optInt("id"),
+                        home.optInt(
+                            "id"
+                        ),
 
                     name =
                         home.optString(
@@ -509,7 +662,9 @@ class FutbolApi {
             awayTeam =
                 TeamInfo(
                     id =
-                        away.optInt("id"),
+                        away.optInt(
+                            "id"
+                        ),
 
                     name =
                         away.optString(
@@ -531,17 +686,29 @@ class FutbolApi {
                 ),
 
             homeGoals =
-                if (goals?.isNull("home") == true) {
+                if (
+                    goals?.isNull(
+                        "home"
+                    ) == true
+                ) {
                     null
                 } else {
-                    goals?.optInt("home")
+                    goals?.optInt(
+                        "home"
+                    )
                 },
 
             awayGoals =
-                if (goals?.isNull("away") == true) {
+                if (
+                    goals?.isNull(
+                        "away"
+                    ) == true
+                ) {
                     null
                 } else {
-                    goals?.optInt("away")
+                    goals?.optInt(
+                        "away"
+                    )
                 },
 
             leagueName =
@@ -561,7 +728,9 @@ class FutbolApi {
     suspend fun getAiStatus(): AiStatus {
 
         val response =
-            get("/ai/status")
+            get(
+                "/ai/status"
+            )
 
         val root =
             JSONObject(response)
@@ -594,7 +763,9 @@ class FutbolApi {
 
             trainingMatches =
                 if (
-                    root.has("training_matches")
+                    root.has(
+                        "training_matches"
+                    )
                 ) {
                     root.optInt(
                         "training_matches"
@@ -605,7 +776,9 @@ class FutbolApi {
 
             validationAccuracy =
                 if (
-                    root.has("validation_accuracy")
+                    root.has(
+                        "validation_accuracy"
+                    )
                 ) {
                     root.optDouble(
                         "validation_accuracy"
@@ -616,7 +789,9 @@ class FutbolApi {
 
             validationLogLoss =
                 if (
-                    root.has("validation_log_loss")
+                    root.has(
+                        "validation_log_loss"
+                    )
                 ) {
                     root.optDouble(
                         "validation_log_loss"
@@ -630,7 +805,9 @@ class FutbolApi {
     suspend fun getPerformance(): AiPerformance {
 
         val response =
-            get("/ai/performance")
+            get(
+                "/ai/performance"
+            )
 
         val root =
             JSONObject(response)
@@ -650,15 +827,23 @@ class FutbolApi {
                 ),
 
             accuracy =
-                if (root.has("accuracy")) {
-                    root.optDouble("accuracy")
+                if (
+                    root.has(
+                        "accuracy"
+                    )
+                ) {
+                    root.optDouble(
+                        "accuracy"
+                    )
                 } else {
                     null
                 },
 
             accuracyPercent =
                 if (
-                    root.has("accuracy_percent")
+                    root.has(
+                        "accuracy_percent"
+                    )
                 ) {
                     root.optDouble(
                         "accuracy_percent"
@@ -668,22 +853,30 @@ class FutbolApi {
                 },
 
             logLoss =
-                if (root.has("log_loss")) {
-                    root.optDouble("log_loss")
+                if (
+                    root.has(
+                        "log_loss"
+                    )
+                ) {
+                    root.optDouble(
+                        "log_loss"
+                    )
                 } else {
                     null
                 },
 
             brierScore =
                 if (
-                    root.has("brier_score")
+                    root.has(
+                        "brier_score"
+                    )
                 ) {
                     root.optDouble(
                         "brier_score"
                     )
                 } else {
                     null
-                }
+                )
         )
     }
 }

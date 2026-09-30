@@ -904,7 +904,7 @@ class FutbolApi {
                     )
                 } else {
                     null
-                )
-        )
+                }
+            )
     }
 }

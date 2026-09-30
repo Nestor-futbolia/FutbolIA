@@ -5,11 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Divider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,119 +16,96 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nestor.futbolia.data.PredictionDetail
+import java.util.Locale
 
 @Composable
 fun PredictionCard(
     prediction: PredictionDetail
 ) {
-
     Card(
-
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    MaterialTheme.colorScheme.surface
-            )
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)
     ) {
 
         Column(
-            modifier =
-                Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
 
             Text(
-                text =
-                    "🤖 PREDICCIÓN FÚTBOL IA",
-
-                style =
-                    MaterialTheme.typography.titleLarge
+                text = "🤖 PREDICCIÓN FÚTBOL IA",
+                style = MaterialTheme.typography.titleLarge
             )
 
             Spacer(
-                modifier =
-                    Modifier.height(4.dp)
+                Modifier.height(8.dp)
+            )
+
+            Text(
+                text = "NESTOR",
+                style = MaterialTheme.typography.labelLarge
+            )
+
+            Spacer(
+                Modifier.height(16.dp)
+            )
+
+            ProbabilityRow(
+                label = "LOCAL",
+                value = prediction.percentages.home
+            )
+
+            ProbabilityRow(
+                label = "EMPATE",
+                value = prediction.percentages.draw
+            )
+
+            ProbabilityRow(
+                label = "VISITANTE",
+                value = prediction.percentages.away
+            )
+
+            Spacer(
+                Modifier.height(16.dp)
+            )
+
+            Divider()
+
+            Spacer(
+                Modifier.height(12.dp)
             )
 
             Text(
                 text =
-                    "NESTOR",
-
-                color =
-                    MaterialTheme.colorScheme.primary,
-
-                style =
-                    MaterialTheme.typography.labelLarge
-            )
-
-            Spacer(
-                modifier =
-                    Modifier.height(18.dp)
-            )
-
-            ProbabilityRow(
-                "LOCAL",
-                prediction.percentages.home
-            )
-
-            ProbabilityRow(
-                "EMPATE",
-                prediction.percentages.draw
-            )
-
-            ProbabilityRow(
-                "VISITANTE",
-                prediction.percentages.away
-            )
-
-            Spacer(
-                modifier =
-                    Modifier.height(14.dp)
-            )
-
-            HorizontalDivider()
-
-            Spacer(
-                modifier =
-                    Modifier.height(12.dp)
-            )
-
-            Text(
-                text =
-                    "Predicción principal: " +
-                        prediction.prediction,
-
+                    "Predicción principal: ${
+                        predictionLabel(
+                            prediction.prediction
+                        )
+                    }",
                 style =
                     MaterialTheme.typography.titleMedium
             )
 
             Text(
                 text =
-                    "Confianza: " +
+                    "Confianza: ${
                         formatPercentage(
                             prediction.predictionPercentage
                         )
+                    }",
+                style =
+                    MaterialTheme.typography.bodyMedium
             )
 
             Spacer(
-                modifier =
-                    Modifier.height(8.dp)
+                Modifier.height(8.dp)
             )
 
             Text(
                 text =
-                    "Modelo: " +
-                        prediction.modelVersion,
-
+                    "Modelo: ${prediction.modelVersion}",
                 style =
-                    MaterialTheme.typography.labelSmall,
-
-                color =
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    MaterialTheme.typography.labelSmall
             )
         }
     }
@@ -141,13 +117,18 @@ private fun ProbabilityRow(
     value: Double
 ) {
 
+    val safeValue =
+        value.coerceIn(
+            0.0,
+            100.0
+        )
+
     Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    vertical = 5.dp
-                )
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                vertical = 5.dp
+            )
     ) {
 
         Row(
@@ -158,28 +139,36 @@ private fun ProbabilityRow(
                 Arrangement.SpaceBetween
         ) {
 
-            Text(label)
+            Text(
+                text = label
+            )
 
             Text(
-                formatPercentage(value)
+                text =
+                    formatPercentage(
+                        safeValue
+                    )
             )
         }
 
-        Spacer(
-            modifier =
-                Modifier.height(4.dp)
-        )
-
         LinearProgressIndicator(
 
-            progress = {
-                (value / 100.0)
-                    .coerceIn(0.0, 1.0)
-                    .toFloat()
-            },
+            progress =
+                (
+                    safeValue / 100.0
+                )
+                    .coerceIn(
+                        0.0,
+                        1.0
+                    )
+                    .toFloat(),
 
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 4.dp
+                    )
         )
     }
 }
@@ -189,8 +178,33 @@ private fun formatPercentage(
 ): String {
 
     return String.format(
-        java.util.Locale.US,
-        "%.1f%%",
+        Locale.US,
+        "%.2f%%",
         value
     )
+}
+
+private fun predictionLabel(
+    prediction: String
+): String {
+
+    return when (
+        prediction.uppercase()
+    ) {
+
+        "HOME",
+        "LOCAL" ->
+            "LOCAL"
+
+        "DRAW",
+        "EMPATE" ->
+            "EMPATE"
+
+        "AWAY",
+        "VISITANTE" ->
+            "VISITANTE"
+
+        else ->
+            prediction
+    }
 }
